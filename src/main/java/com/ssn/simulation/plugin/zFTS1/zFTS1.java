@@ -46,9 +46,9 @@ public class zFTS1 extends Entity {
     @RuntimeState
     protected transient Map<zFTS_Entity1, zTG1> FTFOrder;
     @RuntimeState
-    public transient Map<Entity, zTG1> paarbitWtsk; // paarbit Map
+    public transient Map<Entity, zTG1_WTSK> paarbitWtsk; // paarbit Map
     @RuntimeState
-    protected transient Map<zFTS_Entity1, zTG1> FTFOrderpast; // Archivierung vergangener Orders
+    protected transient Map<zTG1, zFTS_Entity1> FTFOrderpast; // Archivierung vergangener Orders
     protected transient List<zTG1> orders; // eigene Telegrammklasse
     protected transient ZFTS_Connector connector; // ersetzen mit Telegrammspezifischen Verbinder
 
@@ -218,7 +218,7 @@ public class zFTS1 extends Entity {
                                                      // Instanzabfrage erst nach nächstem IF, Reihenfolge beachten
             System.out.println("Der erste Schlüssel ist: " + firstKey + ", sein Wert ist: " + firstValue);
             //
-            this.FTFOrderpast.put(firstKey, firstValue); // Archivierung
+            this.FTFOrderpast.put(firstValue, firstKey); // Archivierung
             this.FTFOrder.remove(firstKey); // löschen des extrahierten Eintrges um nächsten zu nehmen
             if (firstValue instanceof zTG1_POSO) {
                 zTG1_POSO posoValue = (zTG1_POSO) firstValue;
@@ -297,9 +297,9 @@ public class zFTS1 extends Entity {
 
         // Iteration über die Einträge der Map
         // Abfrage ob Quellplatz und HU_Nummer bereits vorhanden in Archiv
-        for (Map.Entry<zFTS_Entity1, zTG1> entry : FTFOrderpast.entrySet()) {
-            zFTS_Entity1 key = entry.getKey();
-            zTG1 value = entry.getValue();
+        for (Map.Entry<zTG1, zFTS_Entity1> entry : FTFOrderpast.entrySet()) {
+            zFTS_Entity1 ftfkey = entry.getValue();
+            zTG1 TGvalue = entry.getKey();
             if (TWtsk.Paarbit.equals("X")) { // cn1 unsicher welches Zeichen Paarbit kennzeichnet
 
                 this.handlePaarbit(TWtsk);
@@ -307,13 +307,13 @@ public class zFTS1 extends Entity {
 
             }
             // Überprüfen, ob die Werte übereinstimmen
-            if (value instanceof zTG1_POSO) {
+            if (TGvalue instanceof zTG1_POSO) {
                 core.logError(this, " 661 POSO gefunden !");
-                zTG1_POSO Tvalue = (zTG1_POSO) value;
+                zTG1_POSO Tvalue = (zTG1_POSO) TGvalue;
                 core.logError(this, "checks 88 " + Tvalue.HU_Nummer + " (HU) " + TWtsk.HU_Nummer + "  " + Tvalue.Quelle
                         + " (Quelle) " + TWtsk.Quelle + " check b " + Tvalue.assigned);
                 if (Tvalue.assigned && Tvalue.HU_Nummer.equals(TWtsk.HU_Nummer) && Tvalue.Quelle.equals(TWtsk.Quelle)) {
-                    zFTS_Entity1 FTF = key;
+                    zFTS_Entity1 FTF = ftfkey;
                     core.logError(this, " 8182 " + FTF.getLastWaypointCode());
                     core.logError(this, " 8183 " + FTF.hasItem());
                     core.logError(this, "alle Prüfungen okay 24 " + FTF + " " + TWtsk);
@@ -370,13 +370,13 @@ public class zFTS1 extends Entity {
         return this.fleetId;
     }
 
-    public Map<zFTS_Entity1, zTG1> getOrderpast() {
+    public Map<zTG1, zFTS_Entity1> getOrderpast() {
         return this.FTFOrderpast;
     }
 
     public void inspectPaarbit(zTG1_WTSK paarbitTG) {
 
-        for (Map.Entry<Entity, zTG1> entry : paarbitWtsk.entrySet()) {
+        for (Map.Entry<Entity, zTG1_WTSK> entry : paarbitWtsk.entrySet()) {
             if (entry.getValue() == paarbitTG) {
                 paarbitTG.Paarbit = null;
                 handleWTSK(paarbitTG);

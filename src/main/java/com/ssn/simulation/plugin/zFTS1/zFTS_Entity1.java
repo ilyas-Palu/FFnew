@@ -299,8 +299,12 @@ public class zFTS_Entity1 extends Entity {
                                         // evtl Einbau clear WTOrder
                                         this.wtorder = null;
                                     }
-
-                                    this.DestinationWay1.remove(key); // löschen Eintrag
+                                    this.DestinationWay1.remove(key);
+                                    if (value.contains("Q") && sameAlley) {
+                                        this.DestinationWay1.put(key, "WTSK-Z");
+                                        sameAlley = false;
+                                    }
+                                    // löschen Eintrag
                                     return;
                                 } else {
                                     if (this.isAt(from)) { // ->Routing möglich
@@ -779,13 +783,16 @@ public class zFTS_Entity1 extends Entity {
         core.logError(this, "Beauftragung wtsk auf Förderer " + lastdest1 + " wegen Ziel " + destMach);
         if (firstsrc != null) {
             DestinationWay1.put(firstsrc, "WTSK-Q"); // eigentliche Quelle zuerst
-        }
-        DestinationWay1.put(lastdest1, "WTSK-Z"); // eigentliches Ziel
-        // aus
-        if (firstsrc == lastdest1) {
-            sameAlley = true;
         } else {
-            sameAlley = false;
+            // Fehlerbehandlung
+            return;
+        }
+        if (firstsrc != lastdest1) {
+            DestinationWay1.put(lastdest1, "WTSK-Z"); // eigentliches Ziel
+        }
+        // aus
+        else {
+            sameAlley = true;
         }
 
     }
@@ -921,9 +928,11 @@ public class zFTS_Entity1 extends Entity {
                 if (lastWaypointCode > 50) {
                     Entity mapped = this.mapPaarbit(destMach); // mapping einbauen cn1
                     if (mapped != null) {
-                        for (Map.Entry<Entity, zTG1> entry : controller.paarbitWtsk.entrySet()) {
+                        for (Map.Entry<Entity, zTG1_WTSK> entry : controller.paarbitWtsk.entrySet()) {
                             if (entry.getKey() == mapped) {
-                                // hanldesrctransfer
+                                setWTSKOrder(entry.getValue());
+
+                                // handleesrctransfer
                                 // Ziel herausziehen und in Routingtabelle
                                 // wtsk Eintrag korrekt aus Tabelle löschen
                             }
