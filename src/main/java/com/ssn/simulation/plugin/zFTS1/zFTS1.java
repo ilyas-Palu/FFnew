@@ -9,6 +9,7 @@
 
 package com.ssn.simulation.plugin.zFTS1;
 
+import java.time.zone.ZoneRulesException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -44,6 +45,8 @@ public class zFTS1 extends Entity {
     protected transient Map<Integer, zFTS_Waypoint> waypoints;
     @RuntimeState
     protected transient Map<zFTS_Entity1, zTG1> FTFOrder;
+    @RuntimeState
+    public transient Map<Entity, zTG1> paarbitWtsk; // paarbit Map
     @RuntimeState
     protected transient Map<zFTS_Entity1, zTG1> FTFOrderpast; // Archivierung vergangener Orders
     protected transient List<zTG1> orders; // eigene Telegrammklasse
@@ -104,6 +107,7 @@ public class zFTS1 extends Entity {
         super.onReset();
         this.FTSR = new HashMap<>();
         this.waypoints = new HashMap<>();
+        this.paarbitWtsk = new HashMap<>();
         this.FTFOrder = new LinkedHashMap<>(); // neue Map zur Verbindung der Orders mit FTF Entität -> Linked für
                                                // korrekte Reihenfolge
         this.FTFOrderpast = new LinkedHashMap<>(); // neue Map zur Archivierung
@@ -274,8 +278,12 @@ public class zFTS1 extends Entity {
             Entity next = core.getEntityById(dest);
             zFTS_Entity1 useFTF = getFreeFTFInit(1); // Homeposition/Bahnhof
             core.logError(this, " 26 Ausgeführt werden soll POSO mit FTF " + useFTF);
-            FTFOrder.put(useFTF, TPoso); // FTFOrder befüllen für onTrigger Methode
-            // Methode Befehl zum Förderer bewegen
+            if (useFTF != null) {
+                FTFOrder.put(useFTF, TPoso); // FTFOrder befüllen für onTrigger Methode
+                // Methode Befehl zum Förderer bewegen
+            } else {
+                core.logError(this, " kein freies FTF gefunden ");
+            }
         } catch (Exception e) {
             core.logError(TPoso, "Zielförderer nicht gefunden");
             return;
@@ -292,6 +300,12 @@ public class zFTS1 extends Entity {
         for (Map.Entry<zFTS_Entity1, zTG1> entry : FTFOrderpast.entrySet()) {
             zFTS_Entity1 key = entry.getKey();
             zTG1 value = entry.getValue();
+            if (TWtsk.Paarbit.equals("X")) { // cn1 unsicher welches Zeichen Paarbit kennzeichnet
+
+                this.handlePaarbit(TWtsk);
+                return;
+
+            }
             // Überprüfen, ob die Werte übereinstimmen
             if (value instanceof zTG1_POSO) {
                 core.logError(this, " 661 POSO gefunden !");
@@ -319,6 +333,16 @@ public class zFTS1 extends Entity {
     }
 
     // Kapazitäts und Zuordnungstests auf FTS bezogene Entitäten :
+
+    public void handlePaarbit(zTG1_WTSK tWtsk) {
+        Entity Paarbit = core.getEntityById(tWtsk.Quelle);
+        paarbitWtsk.put(Paarbit, tWtsk);
+        checkPaarbit(tWtsk);
+    }
+
+    public void checkPaarbit(zTG1_WTSK wtsk) {
+        zPaarbit pbEvent = new zPaarbit(core.now() + 300000, this, wtsk);
+    }
 
     public zFTS_Entity1 getFreeFTFInit(int waypoint) { // Anpassen auf initialen Bahnhof und Methodenergänzung cn1
         // jetzt durch Weasel Liste iterieren und erstes FTF wo Home Position =
@@ -350,4 +374,15 @@ public class zFTS1 extends Entity {
         return this.FTFOrderpast;
     }
 
+    public void inspectPaarbit(zTG1_WTSK paarbitTG) {
+
+        for (Map.Entry<Entity, zTG1> entry : paarbitWtsk.entrySet()) {
+            if (entry.getValue() == paarbitTG) {
+                paarbitTG.Paarbit = null;
+                handleWTSK(paarbitTG);
+                return;
+            }
+
+        }
+    }
 }

@@ -14,6 +14,7 @@ com\ssn\simulation\plugin\zFTS1\PluginMain.class
 com\ssn\simulation\plugin\zFTS1\zTG1_WTSK.class
 com\ssn\simulation\plugin\zFTS1\ASCIIProtocolAdapter.class
 com\ssn\simulation\plugin\zFTS1\ZFTS_Connector$1.class
+com\ssn\simulation\plugin\zFTS1\zTransfer.class
 com\ssn\simulation\plugin\zFTS1\ASCIIConnectionCfg.class
 com\ssn\simulation\plugin\zFTS1\zTG1_POSO.class
 com\ssn\simulation\plugin\zFTS1\ProtocolAdapterCfg.class
