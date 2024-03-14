@@ -62,7 +62,7 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
 
     private WaSocConnectionRegistry connectionRegistry;
 
-    private int sqn;
+    public int sqn;
 
     public ZFTS_Connector() {
 
@@ -170,6 +170,7 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
         this.connections = new HashMap<>();
         this.FTS_Controller = new HashSet<>();
         this.connecting = false;
+        this.sqn = 0;
         for (Entity entity : core.getEntities()) {
             String key = entity.getTelegramHandlerId();
             if (key != null) {
@@ -226,12 +227,12 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
         try {
             telegram.setSender(zTG1.TELEGRAM_DELIMITER_HEADER2);
             telegram.setReceiver(zTG1.TELEGRAM_DELIMITER_HEADER1); // unsicher cn1
-            telegram.setSequencenumber(sqn);
             if (sqn == 9999) {
                 sqn = 1;
             } else {
                 sqn += 1;
             }
+            telegram.setSequencenumber(sqn);
             telegram.setHandshake(zTG1.Handshake1);
             var connection = this.connectionRegistry.getConnection(zTG1.TELEGRAM_DELIMITER_START_ALL);
             var bytes = this.byteHandler.createTelegram();
@@ -280,7 +281,7 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
         }
     }
 
-    public void receiveTelegrams() {
+    public void oldreceiveTelegrams() {
         synchronized (connections) {
             if (!connections.isEmpty()) {
                 for (Entry<Integer, Socket> client : connections.entrySet()) {
@@ -481,6 +482,16 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
     public boolean handleTelegram(InboundTelegram telegram) {
         try {// TODO Auto-generated method stub
             var header = this.byteHandler.read(telegram.getPayload(), zTG1.class);
+            if ((header.getSequencenumber() > 0 && header.getSequencenumber() == this.sqn
+                    && header.getSequencenumber() < this.sqn && this.sqn != 9999)
+                    || (this.sqn == 9999 && header.getSequencenumber() > 1)) {
+
+                this.core.logDebug(this,
+                        "telegram with seqno " + header.getSequencenumber()
+                                + " already processed -> ignoring telegram");
+                return true;
+            }
+            this.sqn = header.getSequencenumber();
             switch (header.getTelegramsubtype()) {
                 case "WTSK":
                     zTG1_WTSK wtsk = byteHandler.read(telegram.getPayload(), zTG1_WTSK.class);
@@ -491,6 +502,7 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
                 case "POSO":
                     zTG1_POSO poso = byteHandler.read(telegram.getPayload(), zTG1_POSO.class);
                     poso.setHeaderfields(header);
+                    byteHandler.read(telegram.getPayload(), poso);
                     this.receiveTelegram(poso);
                     break;
             }

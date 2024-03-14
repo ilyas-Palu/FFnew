@@ -218,9 +218,9 @@ public class zFTS1 extends Entity {
                                                      // Instanzabfrage erst nach nächstem IF, Reihenfolge beachten
             System.out.println("Der erste Schlüssel ist: " + firstKey + ", sein Wert ist: " + firstValue);
             //
-            this.FTFOrderpast.put(firstValue, firstKey); // Archivierung
             this.FTFOrder.remove(firstKey); // löschen des extrahierten Eintrges um nächsten zu nehmen
             if (firstValue instanceof zTG1_POSO) {
+                this.FTFOrderpast.put(firstValue, firstKey); // Archivierung
                 zTG1_POSO posoValue = (zTG1_POSO) firstValue;
                 if (firstKey != null) { // Standart Befehl FTF Bewegung aber konkret Förderer der Positionierung
                     // Vorsicht destinationpoints können sich bei unserem TG nicht aus Inhalt
@@ -261,14 +261,19 @@ public class zFTS1 extends Entity {
         if (connector != null) {
             sender = this;
             core.logError(this, "909 Telegramm hat Controller erreicht ( " + telegram.telegramsubtype);
-            if (telegram.telegramsubtype == "INFO") {
+            if (telegram.telegramsubtype == zTG1_INFO.TELEGRAM_TYPE) {
                 connector.sendTelegram(telegram);
+                core.logError(this, "909 Telegramm hat Controller erreicht ( " + telegram.telegramsubtype);
+            }
+            if (telegram.telegramsubtype == zTG1_WTCO.TELEGRAM_TYPE) {
+                connector.sendTelegram(telegram);
+                core.logError(this, "909 Telegramm hat Controller erreicht ( " + telegram.telegramsubtype);
             }
             // cn1 Konver
             // connector.sendTelegram(sender, telegram); // sende Funktion Connector
             // eingebaut
         } else {
-            core.logError(this, "unable to send telegram, no ngkp connector found: " + telegram);
+            core.logError(this, "unable to send telegram, no known telegrammtype: " + telegram);
         }
     }
 

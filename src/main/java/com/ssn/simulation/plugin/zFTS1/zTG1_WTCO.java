@@ -57,7 +57,7 @@ public class zTG1_WTCO extends zTG1 {
     public static zTG1_WTCO getHeaderData() {
         zTG1_WTCO wtco1 = new zTG1_WTCO();
         zTG1.getHeader(wtco1);
-        wtco1.telegramsubtype = zTG1_INFO.TELEGRAM_TYPE;
+        wtco1.telegramsubtype = zTG1_WTCO.TELEGRAM_TYPE;
         return wtco1;
     }
 
