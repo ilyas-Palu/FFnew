@@ -44,6 +44,7 @@ public class ASCIIProtocolAdapter implements ProtocolAdapter {
         tele.setSender(tele.getReceiver());
         tele.setReceiver(sender);
         tele.setHandshake("Q");
+        // cn1 hier evtl SQN /Comm_Error handling
         try {
             this.byteHandler.write(tele, recTel);
         } catch (ByteWriteException e) {

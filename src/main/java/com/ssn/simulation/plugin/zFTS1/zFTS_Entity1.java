@@ -48,6 +48,8 @@ public class zFTS_Entity1 extends Entity {
     @RuntimeState
     protected transient Entity srcdest; // used
     @RuntimeState
+    protected transient Entity posoSrc; // used
+    @RuntimeState
     protected transient Set<zFTS_Waypoint> allWaypoints;
     @RuntimeState
     protected transient zFTS_Waypoint from; // use like lastwaypointcode
@@ -59,8 +61,6 @@ public class zFTS_Entity1 extends Entity {
     protected transient boolean accelerating;
     @RuntimeState
     protected transient boolean deaccelerating;
-    @RuntimeState
-    protected transient boolean sameAlley;
     @RuntimeState
     protected transient Map<String, zFTS_Waypoint> DestinationWay1; // Alle Destinations per Code
     @RuntimeState
@@ -160,6 +160,7 @@ public class zFTS_Entity1 extends Entity {
         wtorder = null;
         lastReminder = 0;
         waitingFor = null;
+        posoSrc = null;
         DestinationWay1 = new LinkedHashMap<>(); // neue Map zur Archivierung
         for (Entity entity : core.getEntities()) {
             if (entity instanceof zFTS1) { // Austausch eigene Controller Entität! cn1
@@ -253,9 +254,21 @@ public class zFTS_Entity1 extends Entity {
                              * }
                              * }
                              */
+
+                            if (!this.posoSrc.hasItem()) {
+                                if (!this.posoSrc.hasItem()) {
+                                    zInfo_MPOE checkEvent = new zInfo_MPOE(core.now() + 10000);
+                                    checkEvent.setConveyor(posoSrc);
+                                    checkEvent.setWP(zwp.getWaypointCode());
+                                    checkEvent.setFTF(this);
+                                    core.addEvent(checkEvent);
+                                }
+                            }
+
                             this.DestinationWay1.remove(vProcess);// besser eher am Ende der Methode 1mal
+
                             // ausführen
-                            poso = null;
+                            // poso = null; //unsicher cn1
                             return;
 
                             // }
@@ -283,8 +296,8 @@ public class zFTS_Entity1 extends Entity {
                                         if (isMoving()) {
                                             return;
                                         } else if (!hasItem()) {
-                                            handleSrcTransfer(core.now() + 30000, vProcess);
-                                            if (blockedTransfer) {
+                                            handleSrcTransfer(core.now() + 5000, vProcess);
+                                            if (blockedTransfer || !this.hasItem()) {
                                                 return;
                                             }
                                         }
@@ -321,6 +334,7 @@ public class zFTS_Entity1 extends Entity {
 
                                         // evtl Einbau clear WTOrder
                                         this.wtorder = null;
+                                        poso = null;
                                     }
                                     this.DestinationWay1.remove(vProcess);
                                     // löschen Eintrag
@@ -358,46 +372,42 @@ public class zFTS_Entity1 extends Entity {
 
                             // }
                         }
-                    }
-                }
 
-                if (this.hasItem() && lastWaypointCode > 10 && lastWaypointCode < 14 && from != null
-                        && wtorder != null) {
-                    moveWeasel(from.nextWaypoint(50)); // von übergabeplatz stets auf 50
-                    lastWaypointCode = 50;
-                    from = from.nextWaypoint(50);
-                }
+                    } else {
 
-                if (this.assigned == true && poso == null) { // um für WTSK in Controller Entität nicht zu blocken
-                    this.assigned = false;
-                }
+                        if (this.assigned == true && poso == null) { // um für WTSK in Controller Entität nicht zu
+                                                                     // blocken
+                            this.assigned = false; // evtl nach wtco 1mal ausführen
+                        }
 
-                if (!this.isAt(to) && !this.hasItem() && (lastWaypointCode < 11 || lastWaypointCode > 14)) {
-                    if (this.isAt(from)) {
-                        // moveWeasel(to); // hier routing zum nächsten WP einbauen wie oben bei wtsk !
-                        if (from.nextWaypoint(to.getWaypointCode()) != null) { // rendundante logik mit wtsk evtl
-                                                                               // auslagern cn1
-                            from = from.nextWaypoint(to.getWaypointCode());
-                            core.logError(this, "332 wie erwartet vor move" + from);
-                            this.moveWeasel(from);
-                            lastWaypointCode = from.getWaypointCode();
+                        if (!this.isAt(to) && !this.hasItem() && (lastWaypointCode < 11 || lastWaypointCode > 14)) {
+                            if (this.isAt(from)) {
+                                // moveWeasel(to); // hier routing zum nächsten WP einbauen wie oben bei wtsk !
+                                if (from.nextWaypoint(to.getWaypointCode()) != null) { // rendundante logik mit wtsk
+                                                                                       // evtl
+                                                                                       // auslagern cn1
+                                    from = from.nextWaypoint(to.getWaypointCode());
+                                    core.logError(this, "332 wie erwartet vor move" + from);
+                                    this.moveWeasel(from);
+                                    lastWaypointCode = from.getWaypointCode();
+                                    return;
+                                }
+                            } else {
+                                this.moveOutMach();
+                                if (!this.isMoving()) {
+
+                                    moveWeasel(from);
+                                }
+                            }
                             return;
                         }
-                    } else {
-                        this.moveOutMach();
-                        if (!this.isMoving()) {
-
-                            moveWeasel(from);
-                        }
                     }
-                    return;
+                    // if (this.isAt(to) && this.wtorder != null) {
+                    // this.wtorder = null; //cn1 unsicher ob Funktionalität gesichert
+                    // }
                 }
-                // if (this.isAt(to) && this.wtorder != null) {
-                // this.wtorder = null; //cn1 unsicher ob Funktionalität gesichert
-                // }
             }
         }
-
     }
 
     // cn1 falls Prozess bei Produktionsmaschine endet muss defaultmäßig ins Netz
@@ -800,8 +810,8 @@ public class zFTS_Entity1 extends Entity {
 
     public void setPosoOrder(zTG1_POSO Posorder) {
         this.poso = Posorder; // Telegramm Positionierung
-        String q1 = poso.Quelle; // .replaceAll("\\.+$", "");
-        zFTS_Waypoint wp1 = allmap(q1);
+        this.posoSrc = core.getEntityById(poso.Quelle);
+        zFTS_Waypoint wp1 = allmap(poso.Quelle);
         core.logError(this, "Mapping in FTF erfolgreich 68");
         DestinationWay1.put(this.poso.telegramsubtype, wp1); // benötigten Code und Prozess
                                                              // abspeichern
@@ -920,28 +930,38 @@ public class zFTS_Entity1 extends Entity {
             core.logError(this, " in transfer method");
             if (srcdest.hasItem()) {
                 Item HU = srcdest.getFirstItem();
-                // if (HU.getId() == poso.HU_Nummer) { //cn1 korrekte HU ID Prüfung
-                srcdest.moveItem(this, HU, 0);
-                this.infoTG(HU, "");
-                if (lastWaypointCode > 50) {
-                    this.moveOutMach();
+                if (HU.getId().equals(wtorder.HU_Nummer)) { // cn1 korrekte HU ID Prüfung
+                    srcdest.moveItem(this, HU, 0);
+                    this.infoTG(HU, "");
+                    if (lastWaypointCode > 50) {
+                        this.moveOutMach();
+                    }
+                    blockedTransfer = false;
+                    return;
+                } else {
+                    this.handleMMHU();
                 }
-                blockedTransfer = false;
-                return;
                 // }
-            } else if (core.now() < timeEnd && lastWaypointCode > 10 && lastWaypointCode < 14) {
-                zTransfer destEvent = new zTransfer(core.now() + 1000);
-                destEvent.setConveyor(srcdest);
-                destEvent.setEndTime(timeEnd);
-                destEvent.setFTF(this);
-                destEvent.setValue(process);
-                core.addEvent(destEvent);
-                // warten auf Item Logik, evtl über Event oder Notify Methode cn1
+            } else if (lastWaypointCode > 50) {
+                if (core.now() < timeEnd) {
+                    zInfo_MTRE checkMtre = new zInfo_MTRE(core.now() + 1000);
+                    checkMtre.setConveyor(srcdest);
+                    checkMtre.setEndTime(timeEnd);
+                    checkMtre.setFTF(this);
+                    checkMtre.setProcess(process);
+                    core.addEvent(checkMtre);
+                    // warten auf Item Logik, evtl über Event oder Notify Methode cn1
+                    return;
+                } else {
+                    this.handleMTRE();
+
+                }
             }
-
-            // this.infoTG(null,);
-
         }
+
+        blockedTransfer = false;
+
+        // this.infoTG(null,);
 
     }
 
@@ -970,7 +990,6 @@ public class zFTS_Entity1 extends Entity {
                     }
                     this.moveOutMach();
                 }
-                blockedTransfer = false;
             } else if (core.now() < timeEnd) {
                 zTransfer destEvent = new zTransfer(core.now() + 0);
                 destEvent.setConveyor(destMach);
@@ -985,6 +1004,7 @@ public class zFTS_Entity1 extends Entity {
             }
 
         }
+        blockedTransfer = false;
     }
 
     public Entity mapPaarbit(Entity destMach2) {// korrektes Mapping cn1
@@ -997,15 +1017,43 @@ public class zFTS_Entity1 extends Entity {
     }
 
     public void infoTG(Item HU, String MFSError) {
-        zTG1_INFO info = zTG1_INFO.getHeaderData();
-        info.HU_Nummer = HU.getId();
-        info.Quelle = destMach.getId();
-        info.CP = destMach.getId();
-        info.Endekennzeichen = zTG1.TELEGRAM_DELIMITER_ENDING;
-        info.HU_Nummer = HU.getId();
-        info.MFS_Error = "...";
-        info.Reserve = "...";
-        this.sendTelegram(info);
+
+        try {
+            zTG1_INFO info = zTG1_INFO.getHeaderData();
+            if (MFSError != null) {
+                switch (MFSError) {
+                    case "MMHU": // Falsche HU Nummer
+                        info.HU_Nummer = wtorder.HU_Nummer;
+                        info.Quelle = destMach.getId();
+                        info.CP = destMach.getId();
+
+                    case "MPOE": // Zeit abgelaufen nach POSO
+                        info.HU_Nummer = poso.HU_Nummer;
+                        info.Quelle = posoSrc.getId();
+                        info.CP = posoSrc.getId();
+                    case "MTRE": // nach kurzer Zeit trotz wtsk kein item auf Förderer
+                        info.HU_Nummer = wtorder.HU_Nummer;
+                        info.Quelle = destMach.getId();
+                        info.CP = destMach.getId();
+
+                }
+
+                info.MFS_Error = MFSError;
+                info.Reserve = "...";
+
+            } else {
+                info.Quelle = destMach.getId();
+                info.CP = destMach.getId(); // Nachfragen
+                info.HU_Nummer = HU.getId();
+                info.MFS_Error = "";
+                info.Reserve = "...";
+            }
+            info.Endekennzeichen = zTG1.TELEGRAM_DELIMITER_ENDING;
+            this.sendTelegram(info);
+        } catch (Exception e) {
+            core.logError(this, "Problem bei INFO Telegramm Erstellung " + e);
+            return;
+        }
     }
 
     public void wtcoTG(Item HU) {
@@ -1065,5 +1113,31 @@ public class zFTS_Entity1 extends Entity {
 
     public boolean hasDestinatiion() {
         return !destinationWaypoints.isEmpty();
+    }
+
+    public void handleMPOE(int WP) {
+        if (this.isAt(WP)) {
+            this.controller.FTFOrderpast.remove(this.poso); // wichtig um FTF endgültig aus Zuweisung zu entfernen
+            this.moveWeasel(to);
+            this.infoTG(null, "MPOE");
+            this.poso = null;
+            this.posoSrc = null;
+        }
+    }
+
+    public void handleMTRE() {
+        this.infoTG(null, "MTRE");
+        this.poso = null;
+        this.wtorder = null;
+        DestinationWay1.clear();
+        blockedTransfer = false;
+    }
+
+    public void handleMMHU() {
+        this.infoTG(null, "MMHU");
+        this.poso = null;
+        this.wtorder = null;
+        DestinationWay1.clear();
+        blockedTransfer = false;
     }
 }

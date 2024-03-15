@@ -17,6 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 
 import com.ssn.simulation.core.Core;
 import com.ssn.simulation.core.Entity;
@@ -26,6 +27,7 @@ import com.ssn.simulation.properties.RuntimeState;
 import com.ssn.simulation.telegrams.Telegram;
 import com.ssn.simulation.telegrams.ngkp.NGKPTelegram;
 import com.ssn.simulation.telegrams.ngkp.TT2310;
+import com.ssn.simulation.telegrams.pcx.content.Empty;
 import com.ssn.simulation.utils.CoreUtils;
 
 /**
@@ -141,18 +143,25 @@ public class zFTS1 extends Entity {
     }
 
     @Override
-    public void onNotify() {
+    public void onNotify() { // angepasst
         Collection<zFTS_Entity1> all = FTSR.values();
         for (zFTS_Entity1 FTF : all) {
-            FTF.onNotify();
-
+            // if (!FTF.isAt(1) || FTF.poso != null || FTF.wtorder != null) {
+            try {
+                FTF.onNotify();
+            } catch (Exception e) {
+                core.logError(this, " FTF mit ID " + FTF.getId() + "hat unbekannten Fehler: " + e
+                        + " alle Aufträge des FTF werden abgebrochen ");
+                FTF.DestinationWay1.clear();
+                FTF.moveWeasel(FTF.to);
+            }
         }
+        // }
     }
 
     @Override
     public void onStarted() {
         super.onStarted();
-        handleStatusRequest(0);
 
     }
 
@@ -187,23 +196,12 @@ public class zFTS1 extends Entity {
 
             // erstmal nur Logik inklusive vorherigem POSO Telegramm
             // Zielförderer Koordinaten
-
             // Logik Fahrverarbeitung
-        }
-
-        if (telegram instanceof zTG1_LIFE) {
-            core.logInfo(this, "Life Telegramm erhalten"); // Life Telegramm Logik
-            zTG1_LIFE TLife = (zTG1_LIFE) telegram;
-            sendTelegram(TLife, this);
         }
         // Logik für Telegrammverarbeitung Richtung SAP
 
         // connector.sendTelegram(rt1); //vermutlich cn1
 
-    }
-
-    {
-        // Logik für Telegrammverarbeitung Richtung FTS
     }
 
     // wird normalerweise über input oder output Entity aufgerufen
@@ -212,37 +210,51 @@ public class zFTS1 extends Entity {
         super.onTrigger(entity);
         if (!FTFOrder.isEmpty()) {// For Schleife einfügen (Vermutlich für mehrere Telegramme auf einmal)
             // Erster Schlüssel
-            Entry<zFTS_Entity1, zTG1> firstEntry = this.FTFOrder.entrySet().iterator().next();
-            zFTS_Entity1 firstKey = firstEntry.getKey(); // FTF
-            zTG1 firstValue = firstEntry.getValue(); // Telegramm, um allgemeine Logik/Subtypunabhängig erweitern,
-                                                     // Instanzabfrage erst nach nächstem IF, Reihenfolge beachten
-            System.out.println("Der erste Schlüssel ist: " + firstKey + ", sein Wert ist: " + firstValue);
-            //
-            this.FTFOrder.remove(firstKey); // löschen des extrahierten Eintrges um nächsten zu nehmen
-            if (firstValue instanceof zTG1_POSO) {
-                this.FTFOrderpast.put(firstValue, firstKey); // Archivierung
-                zTG1_POSO posoValue = (zTG1_POSO) firstValue;
-                if (firstKey != null) { // Standart Befehl FTF Bewegung aber konkret Förderer der Positionierung
-                    // Vorsicht destinationpoints können sich bei unserem TG nicht aus Inhalt
-                    // gezogen werden
-                    core.logError(this, "assign Poso order " + " to FTF " + firstKey);
-                    firstKey.setPosoOrder(posoValue); // vorheriger Downcast notwendig
-                    posoValue.setFTFId(firstKey.getId());
-                    posoValue.setAssigned(true);
+            try {
+                Entry<zFTS_Entity1, zTG1> firstEntry = this.FTFOrder.entrySet().iterator().next();
+                zFTS_Entity1 firstKey = firstEntry.getKey(); // FTF
+                zTG1 firstValue = firstEntry.getValue(); // Telegramm, um allgemeine Logik/Subtypunabhängig erweitern,
+                                                         // Instanzabfrage erst nach nächstem IF, Reihenfolge beachten
+                System.out.println("Der erste Schlüssel ist: " + firstKey + ", sein Wert ist: " + firstValue);
+                //
+                this.FTFOrder.remove(firstKey); // löschen des extrahierten Eintrges um nächsten zu nehmen
+                if (firstValue instanceof zTG1_POSO) {
+                    this.FTFOrderpast.put(firstValue, firstKey); // Archivierung
+                    zTG1_POSO posoValue = (zTG1_POSO) firstValue;
+                    if (firstKey != null) { // Standart Befehl FTF Bewegung aber konkret Förderer der Positionierung
+                        // Vorsicht destinationpoints können sich bei unserem TG nicht aus Inhalt
+                        // gezogen werden
+                        core.logError(this, "assign Poso order " + " to FTF " + firstKey);
+                        firstKey.setPosoOrder(posoValue); // vorheriger Downcast notwendig
+                        posoValue.setFTFId(firstKey.getId());
+                        posoValue.setAssigned(true);
 
-                    //
-                    // firstKey.handleStartNotification();
+                        //
+                        // firstKey.handleStartNotification();
+                    }
                 }
-            }
-            if (firstValue instanceof zTG1_WTSK) {
-                zTG1_WTSK wtValue = (zTG1_WTSK) firstValue;
-                if (firstKey != null) {
-                    core.logError(this, "assign WTSK order " + " to FTF " + firstKey);
-                    firstKey.setWTSKOrder(wtValue);
-                    wtValue.setFTFId(firstKey.getId());
-                    wtValue.setAssigned(true);
-                }
+                if (firstValue instanceof zTG1_WTSK) {
+                    zTG1_WTSK wtValue = (zTG1_WTSK) firstValue;
+                    if (firstKey != null) {
+                        core.logError(this, "assign WTSK order " + " to FTF " + firstKey);
+                        firstKey.setWTSKOrder(wtValue);
+                        wtValue.setFTFId(firstKey.getId());
+                        wtValue.setAssigned(true);
+                    }
 
+                }
+            } catch (NullPointerException e) {
+                // Hier können Sie die Behandlung für eine NullPointerException einfügen
+                core.logError(this,
+                        "NullPointerException beim Zugriff auf den ersten Eintrag der FTFOrder-Map: " + e.getMessage());
+                FTFOrder.clear();
+                return;
+            } catch (NoSuchElementException e) {
+                // Hier können Sie die Behandlung für das Entfernen eines nicht vorhandenen
+                // Elements einfügen
+                core.logError(this,
+                        "NoSuchElementException beim Entfernen eines Elements aus der FTFOrder-Map: " + e.getMessage());
+                return;
             }
         }
 
@@ -253,21 +265,16 @@ public class zFTS1 extends Entity {
 
     // Beginn zFunktionen und Telegrammverarbeitung
 
-    public void handleStatusRequest(int requestId) {
-
-    }
-
     public void sendTelegram(zTG1 telegram, Entity sender) {
-        if (connector != null) {
+        if (connector != null && telegram != null) {
             sender = this;
-            core.logError(this, "909 Telegramm hat Controller erreicht ( " + telegram.telegramsubtype);
             if (telegram.telegramsubtype == zTG1_INFO.TELEGRAM_TYPE) {
                 connector.sendTelegram(telegram);
-                core.logError(this, "909 Telegramm hat Controller erreicht ( " + telegram.telegramsubtype);
+                core.logError(this, "Telegramm hat Controller erreicht Typ: " + telegram.telegramsubtype);
             }
             if (telegram.telegramsubtype == zTG1_WTCO.TELEGRAM_TYPE) {
                 connector.sendTelegram(telegram);
-                core.logError(this, "909 Telegramm hat Controller erreicht ( " + telegram.telegramsubtype);
+                core.logError(this, "Telegramm hat Controller erreicht Typ: " + telegram.telegramsubtype);
             }
             // cn1 Konver
             // connector.sendTelegram(sender, telegram); // sende Funktion Connector
@@ -278,19 +285,16 @@ public class zFTS1 extends Entity {
     }
 
     public void handlePOSO(zTG1_POSO TPoso) {
-        String dest = TPoso.Quelle;
         try {
-            Entity next = core.getEntityById(dest);
             zFTS_Entity1 useFTF = getFreeFTFInit(1); // Homeposition/Bahnhof
-            core.logError(this, " 26 Ausgeführt werden soll POSO mit FTF " + useFTF);
             if (useFTF != null) {
+                core.logError(this, " Ausgeführt werden soll POSO mit FTF " + useFTF);
                 FTFOrder.put(useFTF, TPoso); // FTFOrder befüllen für onTrigger Methode
-                // Methode Befehl zum Förderer bewegen
             } else {
                 core.logError(this, " kein freies FTF gefunden ");
             }
         } catch (Exception e) {
-            core.logError(TPoso, "Zielförderer nicht gefunden");
+            core.logError(TPoso, "FTF Zuweisung nicht möglich");
             return;
         }
         onTrigger(this);
@@ -303,33 +307,42 @@ public class zFTS1 extends Entity {
         // Iteration über die Einträge der Map
         // Abfrage ob Quellplatz und HU_Nummer bereits vorhanden in Archiv
         for (Map.Entry<zTG1, zFTS_Entity1> entry : FTFOrderpast.entrySet()) {
-            zFTS_Entity1 ftfkey = entry.getValue();
-            zTG1 TGvalue = entry.getKey();
-            if (TWtsk.Paarbit.equals("X")) { // cn1 unsicher welches Zeichen Paarbit kennzeichnet
+            try {
+                zFTS_Entity1 ftfkey = entry.getValue();
+                zTG1 TGvalue = entry.getKey();
 
-                this.handlePaarbit(TWtsk);
-                return;
+                if (TWtsk.Paarbit.equals("X")) { // cn1 unsicher welches Zeichen Paarbit kennzeichnet
 
-            }
-            // Überprüfen, ob die Werte übereinstimmen
-            if (TGvalue instanceof zTG1_POSO) {
-                core.logError(this, " 661 POSO gefunden !");
-                zTG1_POSO Tvalue = (zTG1_POSO) TGvalue;
-                core.logError(this, "checks 88 " + Tvalue.HU_Nummer + " (HU) " + TWtsk.HU_Nummer + "  " + Tvalue.Quelle
-                        + " (Quelle) " + TWtsk.Quelle + " check b " + Tvalue.assigned);
-                if (Tvalue.assigned && Tvalue.HU_Nummer.equals(TWtsk.HU_Nummer) && Tvalue.Quelle.equals(TWtsk.Quelle)) {
-                    zFTS_Entity1 FTF = ftfkey;
-                    core.logError(this, " 8182 " + FTF.getLastWaypointCode());
-                    core.logError(this, " 8183 " + FTF.hasItem());
-                    core.logError(this, "alle Prüfungen okay 24 " + FTF + " " + TWtsk);
-                    FTFOrder.put(FTF, TWtsk); // FTFOrder befüllen für onTrigger Methode
-                    // Logik assign ftf zu Telegram und Abfrage Koordinaten destination
-                    onTrigger(this);
-                    return; // weiterführende Logik notwendig cn1
+                    // this.handlePaarbit(TWtsk);
+                    // return;
 
                 }
-            }
+                // Überprüfen, ob die Werte übereinstimmen
+                if (TGvalue instanceof zTG1_POSO) {
+                    core.logError(this, " 661 POSO gefunden !");
+                    zTG1_POSO Tvalue = (zTG1_POSO) TGvalue;
+                    core.logError(this,
+                            "checks 88 " + Tvalue.HU_Nummer + " (HU) " + TWtsk.HU_Nummer + "  " + Tvalue.Quelle
+                                    + " (Quelle) " + TWtsk.Quelle + " check b " + Tvalue.assigned);
+                    if (Tvalue.assigned && Tvalue.HU_Nummer.equals(TWtsk.HU_Nummer)
+                            && Tvalue.Quelle.equals(TWtsk.Quelle)) {
+                        zFTS_Entity1 FTF = ftfkey;
+                        core.logError(this, "alle Prüfungen okay 24 " + FTF + " " + TWtsk);
+                        FTFOrder.put(FTF, TWtsk); // FTFOrder befüllen für onTrigger Methode
+                        // Logik assign ftf zu Telegram und Abfrage Koordinaten destination
+                        onTrigger(this);
+                        return; // weiterführende Logik notwendig cn
 
+                    }
+                }
+
+            } catch (NullPointerException e) {
+                core.logError(this, "Eine NullPointerException ist aufgetreten: " + e.getMessage());
+                return;
+            } catch (ClassCastException e) {
+                core.logError(this, "Eine ClassCastException ist aufgetreten: " + e.getMessage());
+                return;
+            }
         }
         zFTS_Entity1 newFTF = getFreeFTFInit(1); // Wenn vorher kein POSO gesendet wurde
         FTFOrder.put(newFTF, TWtsk);
@@ -368,6 +381,8 @@ public class zFTS1 extends Entity {
                 }
             }
         }
+
+        core.logError(this, "notwendigen Verfügbarkeits Überprüfungen verhinden FTF Zuweisung");
         return null;
     }
 
