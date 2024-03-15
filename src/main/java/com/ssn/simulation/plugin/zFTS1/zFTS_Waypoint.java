@@ -28,6 +28,7 @@ public class zFTS_Waypoint extends Entity {
     protected int capacityControl;
     protected List<BinWeaselExclusion> incomingExclusions;
     protected List<BinWeaselExclusion> outgoingExclusions;
+    protected String matchEntity;
 
     @RuntimeState
     protected transient boolean locked;
@@ -55,6 +56,7 @@ public class zFTS_Waypoint extends Entity {
         releaseTo = 0;
         routingStrategies = new ArrayList<>();
         routingStrategies.add(new BinWeaselRoutingStrategy("*", 0));
+        matchEntity = "";
     }
 
     @Override
@@ -96,6 +98,7 @@ public class zFTS_Waypoint extends Entity {
     public void onAttributesChanged() {
         super.onAttributesChanged();
         setStringProperty("fleetId", fleetId, "FTS Waypoint");
+        setStringProperty("matchingEntity", matchEntity, "FTS Waypoint");
         setIntegerProperty("waypointCode", waypointCode, "FTS Waypoint");
         setDoubleProperty("maxSpeed", maxSpeed, 0.1, "FTS Waypoint");
         setBooleanProperty("forceStop", forceStop, "FTS Waypoint");
@@ -109,11 +112,8 @@ public class zFTS_Waypoint extends Entity {
     public void onPropertiesChanged() {
         super.onPropertiesChanged();
         fleetId = getStringProperty("fleetId");
+        matchEntity = getStringProperty("matchingEntity");
         waypointCode = getIntegerProperty("waypointCode");
-        maxSpeed = getDoubleProperty("maxSpeed");
-        forceStop = getBooleanProperty("forceStop");
-        supplyFrom = getIntegerProperty("supplyFrom");
-        releaseTo = getIntegerProperty("releaseTo");
         routingStrategies = getListProperty("routingStrategies", BinWeaselRoutingStrategy.class);
     }
 
@@ -182,6 +182,14 @@ public class zFTS_Waypoint extends Entity {
 
     public boolean isLocked() {
         return locked;
+    }
+
+    public String getMatchEntity() {
+        return matchEntity;
+    }
+
+    public void setMatchEntity(String matchEntity) {
+        this.matchEntity = matchEntity;
     }
 
 }

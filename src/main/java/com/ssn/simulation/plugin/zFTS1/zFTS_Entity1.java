@@ -107,13 +107,10 @@ public class zFTS_Entity1 extends Entity {
     @Override
     public void onAttributesChanged() {
         super.onAttributesChanged();
-        setStringProperty("fleetId", fleetId, "Weasel");
-        setIntegerProperty("startPosition", startPosition, "Weasel");
-        setIntegerProperty("homePosition", homePosition, "Weasel");
-        setIntegerProperty("notificationTimeout", notificationTimeout, 1000, "Weasel");
-        setDoubleProperty("travelSpeed", travelSpeed, 0.01, "Weasel");
-        setDoubleProperty("travelAcceleration", travelAcceleration, 0.01, "Weasel");
-        setDoubleProperty("vehicleDistance", vehicleDistance, 0.1, "Weasel");
+        setStringProperty("fleetId", fleetId, "FTS");
+        setIntegerProperty("startPosition", startPosition, "FTS");
+        setIntegerProperty("homePosition", homePosition, "FTS");
+        setDoubleProperty("travelSpeed", travelSpeed, 0.01, "FTS");
     }
 
     @Override
@@ -122,10 +119,7 @@ public class zFTS_Entity1 extends Entity {
         fleetId = getStringProperty("fleetId");
         startPosition = getIntegerProperty("startPosition");
         homePosition = getIntegerProperty("homePosition");
-        notificationTimeout = getIntegerProperty("notificationTimeout");
         travelSpeed = getDoubleProperty("travelSpeed");
-        travelAcceleration = getDoubleProperty("travelAcceleration");
-        vehicleDistance = getDoubleProperty("vehicleDistance");
     }
 
     @Override
@@ -231,29 +225,6 @@ public class zFTS_Entity1 extends Entity {
                                 return;
                             }
                             core.logError(this, " " + (this.isAt(zwp)) + " " + (this.isMoving())); // erst ft dann tt
-                            // next if check,
-                            // if (this.isAt(key) && this.isMoving()) { // an richtigem wp für transfer 2nd
-                            // if wrong cn1
-                            // check cn1
-                            // this.stopFTF(); // manuelles stoppen wichtig da setmovingfalse nicht standard
-                            // handleDestTransfer();
-                            // cn1 im POSO Auftrag belassen
-                            /*
-                             * Entity check = allmap(poso.Quelle);
-                             * if (lastWaypointCode > 10 && lastWaypointCode < 14 && !check.hasItem()) {
-                             * if ((posoTime + 60000) > core.now()) {
-                             * return;
-                             * } else if {
-                             * moveWeasel(to);
-                             * 
-                             * }
-                             * // cn1 Achtung zurzeit evtl null
-                             * if (!check.hasItem(poso.HU_Nummer)) {
-                             * moveWeasel(to);
-                             * infoTG(null, "x");
-                             * }
-                             * }
-                             */
 
                             if (!this.posoSrc.hasItem()) {
                                 if (!this.posoSrc.hasItem()) {
@@ -307,11 +278,6 @@ public class zFTS_Entity1 extends Entity {
                                         if (lastWaypointCode > 50) { // evtl obsolete/unvollständige Abfrage -> Auch
                                                                      // Transfer außerhalb
                                                                      // wpnetz möglich!
-                                            // Entity moveProd = this.calcproddest();
-                                            // if (moveProd instanceof zFTS_Waypoint) { //evtl obsolet
-                                            // zFTS_Waypoint wpdir = (zFTS_Waypoint) moveProd;
-                                            // if (this.sameAlley) { //vermutlich obsolet cn1
-                                            // this.withinAlley(value);
                                             this.moveproddestx(vProcess, false);
                                             if (!isMoving()) {
                                                 this.moveproddesty(vProcess, false);
@@ -357,16 +323,7 @@ public class zFTS_Entity1 extends Entity {
                                         } // cn1
                                     }
                                 }
-
-                                // } else {
-
-                                // if (key.getWaypointCode() > 40) {
-
-                                ; // move bis from Funktion -> oberes IF wird übernehmen
-                                  // } else {
-                                  // this.outsideProd(value); // evtl obsolet -> Routing auch zu Fördertechnik
-                                  // möglich
-                                  // (?)
+                                ;
 
                             }
 
@@ -407,26 +364,6 @@ public class zFTS_Entity1 extends Entity {
                     // }
                 }
             }
-        }
-    }
-
-    // cn1 falls Prozess bei Produktionsmaschine endet muss defaultmäßig ins Netz
-    // navigiert werden
-
-    public Entity calcproddest() {
-        // bestimmen ob Produktionsziel links oder rechts ist
-        float prx = (float) this.destMach.getPosx();
-        // float pry = (float) this.destMach.getPosy();
-        float wpx = (float) this.from.getPosx();
-        // float wpy = (float) this.from.getPosy();
-
-        // float dfx = prx - wpx;
-        // float dfy = pry - wpy;
-
-        if (prx >= wpx) {
-            return from.getOutputEntity(3);
-        } else {
-            return from.getOutputEntity(2);
         }
     }
 
@@ -851,29 +788,16 @@ public class zFTS_Entity1 extends Entity {
     }
 
     public zFTS_Waypoint allmap(String dest) {
-
-        switch (dest) { // Wenn bestimmte Entitäten dann Abfrage
-            case "PROD-TP-05":
-                // return mapwp(dest); //Für Tests ausgeschalten
-                return (zFTS_Waypoint) core.getEntityById("MELDEPUNKT1");
-
-            case "PROD-TP-07":
-                // return mapwp(dest);
-                return (zFTS_Waypoint) core.getEntityById("MELDEPUNKT3");
-
-            case "PROD-TP-09":
-                // return mapwp(dest);
-                return (zFTS_Waypoint) core.getEntityById("MELDEPUNKT5");
-
-            case "SDXP07":
-                // return mapwp(dest);
-                return (zFTS_Waypoint) core.getEntityById("MELDEPUNKT7");
-
-            case "SDXO09":
-                // return mapwp(dest);
-                return (zFTS_Waypoint) core.getEntityById("MELDEPUNKT9");
+        for (zFTS_Waypoint element : allWaypoints) {
+            if (element.getMatchEntity() != null) {
+                String match = element.getMatchEntity();
+                if (match.equals(dest)) {
+                    return element;
+                }
+            }
         }
         return this.calcDest(core.getEntityById(dest));
+
     }
 
     public zFTS_Waypoint mapwp(String dest) {
