@@ -268,7 +268,7 @@ public class zFTS_Entity1 extends Entity {
                                             return;
                                         } else if (!hasItem()) {
                                             handleSrcTransfer(core.now() + 5000, vProcess);
-                                            if (blockedTransfer || !this.hasItem()) {
+                                            if (blockedTransfer) {
                                                 return;
                                             }
                                         }
@@ -856,7 +856,7 @@ public class zFTS_Entity1 extends Entity {
                 Item HU = srcdest.getFirstItem();
                 if (HU.getId().equals(wtorder.HU_Nummer)) { // cn1 korrekte HU ID Prüfung
                     srcdest.moveItem(this, HU, 0);
-                    this.infoTG(HU, "");
+                    this.infoTG(HU, null);
                     if (lastWaypointCode > 50) {
                         this.moveOutMach();
                     }
@@ -981,19 +981,25 @@ public class zFTS_Entity1 extends Entity {
     }
 
     public void wtcoTG(Item HU) {
-        zTG1_WTCO conf = zTG1_WTCO.getHeaderData();
-        conf.Quelle = this.srcdest.getId();
-        conf.Ziel = this.destMach.getId();
-        conf.HU_Nummer = HU.getId();
-        conf.HU_Höhe = wtorder.HU_Höhe; // unsicher ob Info auch aus Antsim entnehmbar
-        conf.Paarbit = wtorder.Paarbit;
-        conf.Paarbit = wtorder.Prioritätsbit;
-        conf.MFS_Error = "";
-        conf.Reserve = "";
-        conf.Endekennzeichen = zTG1.TELEGRAM_DELIMITER_ENDING;
-        this.sendTelegram(conf);
-        // evtl vollkommen obsolet da wtco fast genau gleich wie wtsk, vermutlich nur
-        // anpassung bei error/fehler cn1
+        try {
+            zTG1_WTCO conf = zTG1_WTCO.getHeaderData();
+            conf.Quelle = this.srcdest.getId();
+            conf.Ziel = this.destMach.getId();
+            conf.HU_Nummer = HU.getId();
+            conf.HU_Höhe = wtorder.HU_Höhe; // unsicher ob Info auch aus Antsim entnehmbar
+            conf.Paarbit = wtorder.Paarbit;
+            conf.Paarbit = wtorder.Prioritätsbit;
+            conf.MFS_Error = "";
+            conf.Reserve = "";
+            conf.Endekennzeichen = zTG1.TELEGRAM_DELIMITER_ENDING;
+            this.sendTelegram(conf);
+            // evtl vollkommen obsolet da wtco fast genau gleich wie wtsk, vermutlich nur
+            // anpassung bei error/fehler cn1
+
+        } catch (Exception e) {
+            core.logError(this, "Problem bei WTCO Telegramm Erstellung " + e);
+            return;
+        }
     }
 
     public void sendTelegram(zTG1 tg) {
