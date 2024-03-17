@@ -8,6 +8,7 @@ import java.util.Set;
 
 import com.ssn.simulation.core.Entity;
 import com.ssn.simulation.core.Item;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public class zFTS_Entity1 extends Entity {
 
@@ -17,35 +18,43 @@ public class zFTS_Entity1 extends Entity {
     protected int startPosition; // Waypoint where FTS starts at runtime
     protected int homePosition;
     protected double travelSpeed;
-    protected double vehicleDistance;
 
+    @JsonIgnore
     protected transient zFTS1 controller; // Ersetzen durch eigenen Controller
+    @JsonIgnore
     protected transient int lastWaypointCode; // used ip
+    @JsonIgnore
     protected transient Entity destMach; // used
-
+    @JsonIgnore
     protected transient Entity srcdest; // used
-
+    @JsonIgnore
     protected transient Entity posoSrc; // used
-
+    @JsonIgnore
     protected transient Set<zFTS_Waypoint> allWaypoints; // used
+    @JsonIgnore
     protected transient zFTS_Waypoint from; // use like lastwaypointcode
+    @JsonIgnore
     protected transient zFTS_Waypoint to; // currently probaby home waypoint
-
+    @JsonIgnore
     protected transient Map<String, zFTS_Waypoint> DestinationWay1; // Alle Destinations per Code
+    @JsonIgnore
     protected transient zTG1_POSO poso;
+    @JsonIgnore
     protected transient zTG1_WTSK wtorder;
+    @JsonIgnore
     protected transient long posoTime;
+    @JsonIgnore
     protected transient boolean assigned = false;
+    @JsonIgnore
     protected transient boolean blockedTransfer = false;
 
     public zFTS_Entity1() {
-        sizex = 0.7;
+        sizex = 0.9;
         sizey = 0.7;
         fleetId = "121212";
         startPosition = 1;
         homePosition = 1;
-        travelSpeed = 1.0;
-        vehicleDistance = 1.0;
+        travelSpeed = 3.0;
     }
 
     // Kategorie unter Menübaum
@@ -62,6 +71,7 @@ public class zFTS_Entity1 extends Entity {
         setIntegerProperty("startPosition", startPosition, "FTS");
         setIntegerProperty("homePosition", homePosition, "FTS");
         setDoubleProperty("travelSpeed", travelSpeed, 0.01, "FTS");
+
     }
 
     @Override
@@ -166,7 +176,8 @@ public class zFTS_Entity1 extends Entity {
 
                             if (!this.posoSrc.hasItem()) {
                                 if (!this.posoSrc.hasItem()) {
-                                    zInfo_MPOE checkEvent = new zInfo_MPOE(core.now() + 10000);
+                                    zInfo_MPOE checkEvent = new zInfo_MPOE(
+                                            core.now() + (long) zwp.getMpoe_duration_ms());
                                     checkEvent.setConveyor(posoSrc);
                                     checkEvent.setWP(zwp.getWaypointCode());
                                     checkEvent.setFTF(this);
@@ -319,13 +330,13 @@ public class zFTS_Entity1 extends Entity {
 
     public void moveproddestx(String ent, boolean rev) {
         float prx = 0;
-        float pry = 0;
+        // float pry = 0;
         if ((ent.contains("Z") && !rev) || ((!ent.contains("Z")) && rev)) {
             prx = (float) this.destMach.getPosx();
-            pry = (float) this.destMach.getPosy(); // y eig irrelevant
+            // pry = (float) this.destMach.getPosy(); // y eig irrelevant
         } else {
             prx = (float) this.srcdest.getPosx();
-            pry = (float) this.srcdest.getPosy();
+            // pry = (float) this.srcdest.getPosy();
         }
         if (rev) { // cn1 evtl durch switch ersetzen
             prx = (float) this.from.getPosx();

@@ -13,6 +13,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.ssi.wasoc.WaSoc;
 import com.ssi.wasoc.api.WaSocConnectionRegistry;
 import com.ssi.wasoc.api.WaSocTelegramHandler;
@@ -32,25 +33,38 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
     @AntSimSocConfig
     protected int controllerPort;
 
+    @JsonIgnore
     protected volatile transient LinkedBlockingQueue<zTG1> telegrams;
+    @JsonIgnore
     protected volatile transient Map<String, Entity> handlers;
+    @JsonIgnore
     protected volatile transient Map<Integer, zTG1> sequencecheck;
+    @JsonIgnore
     protected volatile transient Map<Integer, zFTS1> serials;
+    @JsonIgnore
     protected volatile transient Map<String, zFTS1> Fleets;
+    @JsonIgnore
     protected volatile transient Map<Integer, Socket> connections;
+    @JsonIgnore
     protected volatile transient Set<zFTS1> FTS_Controller;
+    @JsonIgnore
     protected volatile transient boolean runtime;
+    @JsonIgnore
     protected volatile transient boolean connecting;
+    @JsonIgnore
     protected volatile transient long lastWaitingTime;
+    @JsonIgnore
     protected volatile transient String fleetId;
+    @JsonIgnore
     protected volatile transient zFTS1 ControllerFTS;
-
+    @JsonIgnore
     public ByteHandler byteHandler;
-
+    @JsonIgnore
     private WaSocThreadPoolExecutorFactory executorFactory;
-
+    @JsonIgnore
     private WaSocConnectionRegistry connectionRegistry;
 
+    @JsonIgnore
     public int sqn;
 
     public ZFTS_Connector() {
@@ -248,7 +262,6 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
             }
         } catch (Exception e) {
             core.logError(this, "unable to send ftf telegram " + telegram + ":" + e, e);
-            zFTS1 FTS = (zFTS1) sender;
             Socket socket = connections.get(this.ControllerFTS);
             try {
                 core.logInfo(this, "close socket for FTSController" + this.ControllerFTS);

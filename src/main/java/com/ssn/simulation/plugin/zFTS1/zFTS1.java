@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import com.ssn.simulation.core.Entity;
 import com.ssn.simulation.telegrams.Telegram;
@@ -33,13 +34,19 @@ public class zFTS1 extends Entity {
     protected int receiverPort;
     protected String fleetId;
     protected int FTFControllerID;
-
+    @JsonIgnore
     protected transient Map<String, zFTS_Entity1> FTSR; // FTS Klasse
+    @JsonIgnore
     protected transient Map<Integer, zFTS_Waypoint> waypoints;
+    @JsonIgnore
     protected transient Map<zFTS_Entity1, zTG1> FTFOrder;
+    @JsonIgnore
     public transient Map<Entity, zTG1_WTSK> paarbitWtsk; // paarbit Map
+    @JsonIgnore
     protected transient Map<zTG1, zFTS_Entity1> FTFOrderpast; // Archivierung vergangener Orders
+    @JsonIgnore
     protected transient List<zTG1> orders; // eigene Telegrammklasse
+    @JsonIgnore
     protected transient ZFTS_Connector connector; // ersetzen mit Telegrammspezifischen Verbinder
 
     // Konstruktor mit default Wertzuweisung, zusätzlich zu Entity Konstruktor

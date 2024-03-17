@@ -39,6 +39,13 @@
 			<scope>system</scope>
 		<systemPath>${project.basedir}/lib/wasoc-4.0.17.jar</systemPath>
 		</dependency>
+		<dependency>
+			<groupId>com.ssn</groupId>
+			<artifactId>jackson-annotations</artifactId>
+			<version>2.14.3</version>
+			<scope>system</scope>
+		<systemPath>${project.basedir}/lib/jackson-annotations-2.14.3.jar</systemPath>
+		</dependency>
 	</dependencies>
 
 

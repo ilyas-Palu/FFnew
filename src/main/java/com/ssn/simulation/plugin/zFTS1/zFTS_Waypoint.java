@@ -3,6 +3,7 @@ package com.ssn.simulation.plugin.zFTS1;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.ssn.simulation.core.Entity;
 import com.ssn.simulation.entities.BinWeaselRoutingStrategy;
 
@@ -12,10 +13,11 @@ public class zFTS_Waypoint extends Entity {
 
     protected String fleetId;
     protected int waypointCode;
-    protected double maxSpeed;
     protected List<BinWeaselRoutingStrategy> routingStrategies;
     protected String matchEntity;
+    protected double mpoe_duration_ms;
 
+    @JsonIgnore
     protected transient zFTS1 controller;
 
     public zFTS_Waypoint() {
@@ -26,10 +28,10 @@ public class zFTS_Waypoint extends Entity {
         transparent = true;
         fleetId = "11011";
         waypointCode = 0;
-        maxSpeed = 1.0;
         routingStrategies = new ArrayList<>();
         routingStrategies.add(new BinWeaselRoutingStrategy("*", 0));
         matchEntity = "";
+        mpoe_duration_ms = 10000;
     }
 
     @Override
@@ -69,9 +71,9 @@ public class zFTS_Waypoint extends Entity {
         setStringProperty("fleetId", fleetId, "FTS Waypoint");
         setStringProperty("matchingEntity", matchEntity, "FTS Waypoint");
         setIntegerProperty("waypointCode", waypointCode, "FTS Waypoint");
-        setDoubleProperty("maxSpeed", maxSpeed, 0.1, "FTS Waypoint");
         setListProperty("routingStrategies", routingStrategies, "FTS Waypoint",
                 createPojoListProperty(BinWeaselRoutingStrategy.class));
+        setDoubleProperty("MpoeDurationMs", mpoe_duration_ms, 1000, "FTS Waypoint");
     }
 
     @Override
@@ -81,6 +83,7 @@ public class zFTS_Waypoint extends Entity {
         matchEntity = getStringProperty("matchingEntity");
         waypointCode = getIntegerProperty("waypointCode");
         routingStrategies = getListProperty("routingStrategies", BinWeaselRoutingStrategy.class);
+        mpoe_duration_ms = getDoubleProperty("MpoeDurationMs");
     }
 
     public String getFleetId() {
@@ -114,10 +117,6 @@ public class zFTS_Waypoint extends Entity {
         return null;
     }
 
-    public double getMaxSpeed() {
-        return maxSpeed;
-    }
-
     public String getMatchEntity() {
         return matchEntity;
     }
@@ -126,4 +125,11 @@ public class zFTS_Waypoint extends Entity {
         this.matchEntity = matchEntity;
     }
 
+    public double getMpoe_duration_ms() {
+        return mpoe_duration_ms;
+    }
+
+    public void setMpoe_duration_ms(long mpoe_duration_ms) {
+        this.mpoe_duration_ms = mpoe_duration_ms;
+    }
 }
