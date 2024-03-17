@@ -9,7 +9,6 @@
 
 package com.ssn.simulation.plugin.zFTS1;
 
-import java.time.zone.ZoneRulesException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -19,16 +18,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 
-import com.ssn.simulation.core.Core;
 import com.ssn.simulation.core.Entity;
-import com.ssn.simulation.entities.ConnectorNGKP;
-import com.ssn.simulation.entities.PalletController;
-import com.ssn.simulation.properties.RuntimeState;
 import com.ssn.simulation.telegrams.Telegram;
-import com.ssn.simulation.telegrams.ngkp.NGKPTelegram;
-import com.ssn.simulation.telegrams.ngkp.TT2310;
-import com.ssn.simulation.telegrams.pcx.content.Empty;
-import com.ssn.simulation.utils.CoreUtils;
 
 /**
  * Controller Entity for FTS zImplementation
@@ -45,17 +36,11 @@ public class zFTS1 extends Entity {
 
     protected transient Map<String, zFTS_Entity1> FTSR; // FTS Klasse
     protected transient Map<Integer, zFTS_Waypoint> waypoints;
-    @RuntimeState
     protected transient Map<zFTS_Entity1, zTG1> FTFOrder;
-    @RuntimeState
     public transient Map<Entity, zTG1_WTSK> paarbitWtsk; // paarbit Map
-    @RuntimeState
     protected transient Map<zTG1, zFTS_Entity1> FTFOrderpast; // Archivierung vergangener Orders
     protected transient List<zTG1> orders; // eigene Telegrammklasse
     protected transient ZFTS_Connector connector; // ersetzen mit Telegrammspezifischen Verbinder
-
-    @RuntimeState
-    protected transient zTG1 order;
 
     // Konstruktor mit default Wertzuweisung, zusätzlich zu Entity Konstruktor
     public zFTS1() {
@@ -153,7 +138,7 @@ public class zFTS1 extends Entity {
                 core.logError(this, " FTF mit ID " + FTF.getId() + "hat unbekannten Fehler: " + e
                         + " alle Aufträge des FTF werden abgebrochen ");
                 FTF.DestinationWay1.clear();
-                FTF.moveWeasel(FTF.to);
+                FTF.moveWeasel(FTF.getHomewp());
             }
         }
         // }
@@ -224,7 +209,7 @@ public class zFTS1 extends Entity {
                     if (firstKey != null) { // Standart Befehl FTF Bewegung aber konkret Förderer der Positionierung
                         // Vorsicht destinationpoints können sich bei unserem TG nicht aus Inhalt
                         // gezogen werden
-                        core.logError(this, "assign Poso order " + " to FTF " + firstKey);
+                        core.logInfo(this, "assign Poso order " + " to FTF " + firstKey);
                         firstKey.setPosoOrder(posoValue); // vorheriger Downcast notwendig
                         posoValue.setFTFId(firstKey.getId());
                         posoValue.setAssigned(true);
@@ -236,7 +221,7 @@ public class zFTS1 extends Entity {
                 if (firstValue instanceof zTG1_WTSK) {
                     zTG1_WTSK wtValue = (zTG1_WTSK) firstValue;
                     if (firstKey != null) {
-                        core.logError(this, "assign WTSK order " + " to FTF " + firstKey);
+                        core.logInfo(this, "assign WTSK order " + " to FTF " + firstKey);
                         firstKey.setWTSKOrder(wtValue);
                         wtValue.setFTFId(firstKey.getId());
                         wtValue.setAssigned(true);
@@ -270,11 +255,11 @@ public class zFTS1 extends Entity {
             sender = this;
             if (telegram.telegramsubtype == zTG1_INFO.TELEGRAM_TYPE) {
                 connector.sendTelegram(telegram);
-                core.logError(this, "Telegramm hat Controller erreicht Typ: " + telegram.telegramsubtype);
+                core.logInfo(this, "Telegramm hat Controller erreicht Typ: " + telegram.telegramsubtype);
             }
             if (telegram.telegramsubtype == zTG1_WTCO.TELEGRAM_TYPE) {
                 connector.sendTelegram(telegram);
-                core.logError(this, "Telegramm hat Controller erreicht Typ: " + telegram.telegramsubtype);
+                core.logInfo(this, "Telegramm hat Controller erreicht Typ: " + telegram.telegramsubtype);
             }
             // cn1 Konver
             // connector.sendTelegram(sender, telegram); // sende Funktion Connector
@@ -288,7 +273,7 @@ public class zFTS1 extends Entity {
         try {
             zFTS_Entity1 useFTF = getFreeFTFInit(1); // Homeposition/Bahnhof
             if (useFTF != null) {
-                core.logError(this, " Ausgeführt werden soll POSO mit FTF " + useFTF);
+                core.logInfo(this, " Ausgeführt werden soll POSO mit FTF " + useFTF);
                 FTFOrder.put(useFTF, TPoso); // FTFOrder befüllen für onTrigger Methode
             } else {
                 core.logError(this, " kein freies FTF gefunden ");
@@ -319,15 +304,11 @@ public class zFTS1 extends Entity {
                 }
                 // Überprüfen, ob die Werte übereinstimmen
                 if (TGvalue instanceof zTG1_POSO) {
-                    core.logError(this, " 661 POSO gefunden !");
                     zTG1_POSO Tvalue = (zTG1_POSO) TGvalue;
-                    core.logError(this,
-                            "checks 88 " + Tvalue.HU_Nummer + " (HU) " + TWtsk.HU_Nummer + "  " + Tvalue.Quelle
-                                    + " (Quelle) " + TWtsk.Quelle + " check b " + Tvalue.assigned);
                     if (Tvalue.assigned && Tvalue.HU_Nummer.equals(TWtsk.HU_Nummer)
                             && Tvalue.Quelle.equals(TWtsk.Quelle)) {
                         zFTS_Entity1 FTF = ftfkey;
-                        core.logError(this, "alle Prüfungen okay 24 " + FTF + " " + TWtsk);
+                        core.logError(this, "passender POSO zu WTSK gefunden ");
                         FTFOrder.put(FTF, TWtsk); // FTFOrder befüllen für onTrigger Methode
                         // Logik assign ftf zu Telegram und Abfrage Koordinaten destination
                         onTrigger(this);
@@ -372,13 +353,12 @@ public class zFTS1 extends Entity {
             for (zFTS_Entity1 FTF : all) {
                 if (FTF.getPoso() == null) {
                     if (FTF.getLastWaypointCode() == waypoint) {
-                        if (FTF.getNextWaypointCode() == 0) {
-                            if (!FTF.hasDestinatiion()) {
-                                return FTF;
-                            }
+                        if (!FTF.hasDestination()) {
+                            return FTF;
                         }
                     }
                 }
+
             }
         }
 

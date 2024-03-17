@@ -1,12 +1,10 @@
 package com.ssn.simulation.plugin.zFTS1;
 
 import java.awt.Color;
-import java.awt.Graphics;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -23,17 +21,8 @@ import com.ssi.wasoc.api.telegram.InboundTelegram;
 import com.ssi.wasoc.api.telegram.OutboundTelegram;
 import com.ssn.simulation.core.Entity;
 import com.ssn.simulation.editor.ValidationMessage;
-import com.ssn.simulation.editor.Viewport;
 import com.ssn.simulation.entities.AntSimSocConfig;
-import com.ssn.simulation.entities.weasel.Weasel;
-import com.ssn.simulation.entities.weasel.WeaselConnector;
-import com.ssn.simulation.entities.weasel.WeaselSegementGroup;
 import com.ssn.simulation.events.TelegramEvent;
-import com.ssn.simulation.telegrams.weasel.WeaselConfigReply;
-import com.ssn.simulation.telegrams.weasel.WeaselConfigRequest;
-import com.ssn.simulation.telegrams.weasel.WeaselOrder;
-import com.ssn.simulation.telegrams.weasel.WeaselStatus;
-import com.ssn.simulation.telegrams.weasel.WeaselTelegram;
 
 public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
 
@@ -131,35 +120,28 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
             zTG1 telegram = telegrams.poll(); // Änderung auf zTG1
             // Logik abprüfen ob ein FTFController vorhanden ist, welcher mehrere FTFs
             // kontrolliert, cn1, wenn ja dann genau diesen FTFController einbauen
-            core.logError(this, "check 71 connector passed");
+            core.logInfo(this, "neues Telegramm erkannt");
             if (!serials.isEmpty()) {
                 // Den ersten Eintrag der Map ausgeben
                 // Änderung durchgeführt , Herausziehen der Controller Entität,
                 // sichern per FleetID Vergleich
                 // Entscheidung diverse IFs obsolet
                 if (telegram != null) {
-                    core.logError(this, "check 73 connector passed");
+
                     TelegramEvent event = new TelegramEvent();
                     event.setTime(core.now());
                     event.setEntity(ControllerFTS);
                     event.setTelegram(telegram);
                     core.addEvent(event);
+
+                    core.logInfo(this, "Telegramm wird weitergeleitet an Controller");
                 } else {
                     core.logError(this, "handler not found for " + telegram);
                 }
 
             }
         }
-        // core.logError(this, "onNotify actually executed");
     };
-
-    public void checkDistances() {
-        // Logik für Distanzkontroller
-    }
-
-    public void checkSegmentGroups() {
-        // Logik für Segment checken
-    }
 
     @Override
     public void onReset() {
@@ -249,7 +231,6 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
                                                                 // Logik ergänzt
         try {
             if (sender instanceof zFTS1) {
-                zFTS1 FTS = (zFTS1) sender;
                 if (telegram instanceof zTG1) {
                     byte[] byteArray = null; // cn1 getByteOutputsream Logik fehlt;
                     if (telegram.confirmed == false) {
@@ -286,7 +267,6 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
             if (!connections.isEmpty()) {
                 for (Entry<Integer, Socket> client : connections.entrySet()) {
                     Socket socket = client.getValue();
-                    Integer serialNumber = client.getKey();
                     String encoding = "UTF-8";
                     if (socket.isConnected()) {
                         try {
@@ -302,16 +282,16 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
                                 String stringValue = "";
                                 byte[] arr = new byte[1];
                                 boolean startFound = false;
-                                core.logError(this, "check 1 connector passed");
+                                core.logInfo(this, "check 1 connector passed");
                                 while (byteValue != -1 || stringValue.equals(zTG1.TELEGRAM_DELIMITER_START)) {
-                                    core.logError(this, "check 2 connector passed");
+                                    core.logInfo(this, "check 2 connector passed");
                                     byteValue = bufin.read();
                                     arr[0] = (byte) byteValue;
                                     stringValue = new String(arr, encoding); // neu evtl. Grund für Fehler
                                     if (stringValue.equals(zTG1.TELEGRAM_DELIMITER_START) || i > 0) { // Neue Logik
                                                                                                       // Schritt 1
                                                                                                       // Abfrage auf "E"
-                                        core.logError(this, "check 3 connector passed");
+                                        core.logInfo(this, "check 3 connector passed");
                                         startcheck.append(stringValue);
                                         i += 1;
                                         // in folgende IF Abfrage wird nicht navigiert
@@ -321,7 +301,7 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
                                             // gesamten Senders
                                             // nach 6
                                             // Durchgängen
-                                            core.logError(this, "check 4 connector passed");
+                                            core.logInfo(this, "check 4 connector passed");
                                             telegramValues.append(startcheck); // hier vermutlich nicht, da
                                                                                // telegrammvalues vollkommen leer
                                             startFound = true;
@@ -330,7 +310,7 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
                                     }
                                 }
                                 if (startFound) { // Neue Logik für Endzeichenprüfung
-                                    core.logError(this, "check 6 connector passed");
+                                    core.logInfo(this, "check 6 connector passed");
                                     String lastcheck = null;
                                     while (byteValue != -1
                                             || stringValue.equals(zTG1.TELEGRAM_DELIMITER_END_1)) {
@@ -339,12 +319,12 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
                                         stringValue = new String(arr, encoding);
                                         if (stringValue.equals(zTG1.TELEGRAM_DELIMITER_END_1)
                                                 && lastcheck.equals(zTG1.TELEGRAM_DELIMITER_END_1)) { // evtl_cn1_139
-                                            core.logError(this, "check 7 connector passed"); // springt nicht hier rein
+                                            core.logInfo(this, "check 7 connector passed"); // springt nicht hier rein
                                             telegramValues.append(stringValue);
                                             break;
                                         } else {
                                             telegramValues.append(stringValue);
-                                            core.logError(this, "check 11 connector passed" + telegramValues + i);
+                                            core.logInfo(this, "check 11 connector passed" + telegramValues + i);
                                             lastcheck = stringValue; // Speichern des letzten Bytes um später zu
                                                                      // vergleichen
                                             i += 1; // weiterzählen der Bytes
@@ -357,7 +337,7 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
                                     // bisher numbercheck wie in Referenzconnector
                                     i = 0; // löst initialiserungsproblem vermutlich nicht cn1
                                     zTG1 telegram = null;
-                                    core.logError(this, "Test 99 following");
+                                    core.logInfo(this, "TG Erstellung");
                                     telegram = zTG1.interpret(telegramValues.toString()); // Telegramm mit
                                     // richtigen
                                     // Ausprägungen steht
@@ -373,7 +353,7 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
                                         // if (!sequencecheck.containsKey(telegram.sequencenumber)) {
                                         // Entity zController = serials.get(serialNumber);
 
-                                        core.logError(this, "check 8 connector passed");
+                                        core.logInfo(this, "check 8 connector passed");
                                         receiveTelegram(telegram);
 
                                         core.logError(this, "Telegramm bereits vorhanden");
@@ -403,7 +383,7 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
         core.logInfo(this, "receives a FTF telegram: " + telegram.toString());
         try {
             telegrams.put(telegram);
-            core.logError(this, "successfully added ");
+            core.logInfo(this, "new telegram successfully added ");
         } catch (InterruptedException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();

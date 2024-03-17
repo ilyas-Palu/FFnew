@@ -1,24 +1,13 @@
 package com.ssn.simulation.plugin.zFTS1;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashSet;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
 import com.ssn.simulation.core.Entity;
 import com.ssn.simulation.core.Item;
-import com.ssn.simulation.entities.BinWeasel;
-import com.ssn.simulation.entities.BinWeaselController;
-import com.ssn.simulation.entities.BinWeaselExclusion;
-import com.ssn.simulation.entities.BinWeaselWaypoint;
-import com.ssn.simulation.properties.RuntimeState;
-import com.ssn.simulation.telegrams.ngkp.TT2310;
-import com.ssn.simulation.utils.MathUtils;
 
 public class zFTS_Entity1 extends Entity {
 
@@ -27,73 +16,35 @@ public class zFTS_Entity1 extends Entity {
     protected String fleetId;
     protected int startPosition; // Waypoint where FTS starts at runtime
     protected int homePosition;
-    protected int PositioningPosition;
-    protected int notificationTimeout;
     protected double travelSpeed;
-    protected double travelAcceleration;
     protected double vehicleDistance;
 
-    protected transient String FTFID;
-
     protected transient zFTS1 controller; // Ersetzen durch eigenen Controller
-
-    @RuntimeState
     protected transient int lastWaypointCode; // used ip
-    @RuntimeState
-    protected transient int nextWaypointCode;
-    @RuntimeState
-    protected transient List<Integer> destinationWaypoints;
-    @RuntimeState
     protected transient Entity destMach; // used
-    @RuntimeState
-    protected transient Entity srcdest; // used
-    @RuntimeState
-    protected transient Entity posoSrc; // used
-    @RuntimeState
-    protected transient Set<zFTS_Waypoint> allWaypoints;
-    @RuntimeState
-    protected transient zFTS_Waypoint from; // use like lastwaypointcode
-    @RuntimeState
-    protected transient zFTS_Waypoint to; // currently probaby home waypoint
-    @RuntimeState
-    protected transient double currentSpeed;
-    @RuntimeState
-    protected transient boolean accelerating;
-    @RuntimeState
-    protected transient boolean deaccelerating;
-    @RuntimeState
-    protected transient Map<String, zFTS_Waypoint> DestinationWay1; // Alle Destinations per Code
-    @RuntimeState
-    protected transient Map<Float, zFTS_Waypoint> Destprod; // Entfernung Produktionsziel
-    @RuntimeState
-    protected transient boolean arrived;
-    @RuntimeState
-    protected transient zTG1_POSO poso;
-    @RuntimeState
-    protected transient zTG1_WTSK wtorder;
-    @RuntimeState
-    protected transient long lastReminder;
-    @RuntimeState
-    protected transient long posoTime;
 
-    @RuntimeState
-    protected transient String waitingFor;
-    @RuntimeState
-    protected transient long lastWaiting;
-    @RuntimeState
+    protected transient Entity srcdest; // used
+
+    protected transient Entity posoSrc; // used
+
+    protected transient Set<zFTS_Waypoint> allWaypoints; // used
+    protected transient zFTS_Waypoint from; // use like lastwaypointcode
+    protected transient zFTS_Waypoint to; // currently probaby home waypoint
+
+    protected transient Map<String, zFTS_Waypoint> DestinationWay1; // Alle Destinations per Code
+    protected transient zTG1_POSO poso;
+    protected transient zTG1_WTSK wtorder;
+    protected transient long posoTime;
     protected transient boolean assigned = false;
-    @RuntimeState
     protected transient boolean blockedTransfer = false;
 
     public zFTS_Entity1() {
         sizex = 0.7;
         sizey = 0.7;
         fleetId = "121212";
-
         startPosition = 1;
         homePosition = 1;
         travelSpeed = 1.0;
-        travelAcceleration = 0.5;
         vehicleDistance = 1.0;
     }
 
@@ -138,22 +89,13 @@ public class zFTS_Entity1 extends Entity {
         super.onReset();
         controller = null;
         lastWaypointCode = 0;
-        nextWaypointCode = 0;
-        destinationWaypoints = new ArrayList<>();
         from = null;
         to = null;
         allWaypoints = new HashSet<>();
-        Destprod = new HashMap<>();
-        currentSpeed = 0;
-        accelerating = false;
-        deaccelerating = false;
-        arrived = true;
         destMach = null;
         poso = null;
         posoTime = 0;
         wtorder = null;
-        lastReminder = 0;
-        waitingFor = null;
         posoSrc = null;
         DestinationWay1 = new LinkedHashMap<>(); // neue Map zur Archivierung
         for (Entity entity : core.getEntities()) {
@@ -182,9 +124,7 @@ public class zFTS_Entity1 extends Entity {
     public void onStarted() {
         super.onStarted();
         if (to != null) {
-            to.addInputWeasel(this); // Austausch durch eigene Waypoint Entity cn1, hinterlegung des "Bahnhofs"
             setLastWaypointCode(to.getWaypointCode());
-            setNextWaypointCode(0);
             setLayer(to.getLayer());
             setMoveStopx(to.getInterpolatedPosx());
             setMoveStopy(to.getInterpolatedPosy());
@@ -217,14 +157,12 @@ public class zFTS_Entity1 extends Entity {
                             this.posoTime = core.now();
                             if ((zwp.getWaypointCode() == 11 || zwp.getWaypointCode() == 12
                                     || zwp.getWaypointCode() == 13) && this.isAt(to)) { // geändete von 1 auf to
-                                core.logError(this, "auch 55 WP Code check erfolgreich ");
+                                core.logInfo(this, "POSO wurde erkannt");
                                 this.moveWeasel(zwp);
-                                core.logError(this, " check lastif 99");
                                 lastWaypointCode = zwp.getWaypointCode(); // Übergabe aktuelle Position
                                 from = zwp; // eig Rendundanz mit lastwaypointcode, evtl nur from Nutzung
                                 return;
                             }
-                            core.logError(this, " " + (this.isAt(zwp)) + " " + (this.isMoving())); // erst ft dann tt
 
                             if (!this.posoSrc.hasItem()) {
                                 if (!this.posoSrc.hasItem()) {
@@ -309,7 +247,8 @@ public class zFTS_Entity1 extends Entity {
                                     if (this.isAt(from)) { // ->Routing möglich
                                         if (from.nextWaypoint(zwp.getWaypointCode()) != null) {
                                             from = from.nextWaypoint(zwp.getWaypointCode());
-                                            core.logError(this, "332 wie erwartet vor move" + from);
+                                            core.logInfo(this,
+                                                    "Waypoint Routing erfolgreich Beauftragung nach " + from.getId());
                                             this.moveWeasel(from);
                                             lastWaypointCode = from.getWaypointCode();
                                             return;
@@ -344,7 +283,8 @@ public class zFTS_Entity1 extends Entity {
                                                                                        // evtl
                                                                                        // auslagern cn1
                                     from = from.nextWaypoint(to.getWaypointCode());
-                                    core.logError(this, "332 wie erwartet vor move" + from);
+                                    core.logInfo(this,
+                                            "Waypoint Routing erfolgreich, Beauftragung nach" + from.getId());
                                     this.moveWeasel(from);
                                     lastWaypointCode = from.getWaypointCode();
                                     return;
@@ -370,7 +310,6 @@ public class zFTS_Entity1 extends Entity {
     @Override
     public void onMoved(double x, double y, double z) {
         super.onMoved(this.getPosx(), this.getPosy(), this.getPosz());
-        this.arrived = true;
         setMoving(false);
 
     }
@@ -388,13 +327,13 @@ public class zFTS_Entity1 extends Entity {
             prx = (float) this.srcdest.getPosx();
             pry = (float) this.srcdest.getPosy();
         }
-        if (rev) { // cn1 unbedingt durch switch ersetzen
+        if (rev) { // cn1 evtl durch switch ersetzen
             prx = (float) this.from.getPosx();
         }
         if (this.posx - prx < 0.03 && this.posx - prx > -0.03) { // Abfrage ob Position bereits stimmt
             return;
         }
-        // this.arrived = false;
+
         // setMoving(true);
         this.moveWithSpeed(prx, from.getPosy(), destMach.getPosz(), 0);
 
@@ -425,7 +364,6 @@ public class zFTS_Entity1 extends Entity {
         } else {
             buf1 = pry + buf1;
         }
-        // this.arrived = false;
 
         if (this.posy - buf1 < 0.03 && posy - buf1 > -0.03 || rev) { // Abfrage ob Position bereits stimmt
             return;
@@ -455,138 +393,10 @@ public class zFTS_Entity1 extends Entity {
     }
 
     public void moveWeasel(zFTS_Waypoint waypoint) {
-        accelerating = false;
-        deaccelerating = false;
-        if (mustBrake(waypoint)) {
-            if (currentSpeed > 0) {
-                currentSpeed = Math.max(0, currentSpeed - (travelAcceleration * core.getReactionDelay() * 0.001));
-                deaccelerating = true;
-            }
-        } else {
-            if (currentSpeed < travelSpeed) {
-                currentSpeed = Math.min(travelSpeed,
-                        currentSpeed + (travelAcceleration * core.getReactionDelay() * 0.001));
-                accelerating = true;
-            }
-        }
-        double distanceToWaypoint = distanceTo(waypoint);
-        double maxDistance = currentSpeed * core.getReactionDelay() * 0.001;
-        double startx = getInterpolatedPosx();
-        double starty = getInterpolatedPosy();
-        double startz = getInterpolatedPosz();
-        double stopx = waypoint.getInterpolatedPosx();
-        double stopy = waypoint.getInterpolatedPosy();
-        double stopz = waypoint.getInterpolatedPosz();
-
-        core.logError(this, " Vergleiche 77 " + maxDistance + "   x   " + distanceToWaypoint);
         // if (maxDistance > distanceToWaypoint) {// cn1 not reversed operator
         // starke Abweichung von Referenzentitäten !
-        // this.arrived = false;
         this.moveWithSpeed(waypoint.getPosx(), waypoint.getPosy(), waypoint.getPosz(), 0);
 
-    }
-
-    public boolean mustBrake(zFTS_Waypoint waypoint) {
-        double brakeDistance = MathUtils.brakeDistance(currentSpeed, travelAcceleration); // Bremsweg?
-        double safeDistance = brakeDistance + vehicleDistance;
-        double totalDistance = 0;
-        Entity last = this;
-        zFTS_Waypoint curr = waypoint;
-        zFTS_Waypoint next = null;
-        double distanceToNextVehicle = Double.POSITIVE_INFINITY;
-        double distanceToNextWaypoint = Double.POSITIVE_INFINITY;
-        int destination = waypoint.getWaypointCode(); // Änderung auf eigene Dest Logik
-        while (curr != null && totalDistance <= safeDistance) {
-            // detect weasel
-            if (distanceToNextVehicle == Double.POSITIVE_INFINITY) {
-                for (zFTS_Entity1 weasel : curr.getInputWeasels()) {
-                    if (weasel != this) {
-                        double distanceToVehicle = totalDistance + last.distanceTo(weasel);
-                        if (curr == waypoint) {
-                            if (weasel.distanceTo(waypoint) <= distanceTo(waypoint)) {
-                                if (distanceToVehicle < safeDistance) {
-                                    if (distanceToVehicle < distanceToNextVehicle) {
-                                        distanceToNextVehicle = distanceToVehicle;
-                                    }
-                                }
-                            }
-                        } else {
-                            if (distanceToVehicle < safeDistance) {
-                                if (distanceToVehicle < distanceToNextVehicle) {
-                                    distanceToNextVehicle = distanceToVehicle;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            next = curr.nextWaypoint(destination); // Tabellenrouting
-            if (distanceToNextWaypoint == Double.POSITIVE_INFINITY) {
-
-                // detect speed restriction, max-speed removed
-                double distanceToCurrent = totalDistance + last.distanceTo(curr);
-                // detect dead-end
-                if (next == null) {
-                    if (distanceToCurrent <= brakeDistance) {
-                        distanceToNextWaypoint = distanceToCurrent;
-                    }
-                }
-                // detect destination
-                if (next != null && destination != 0 && curr.getWaypointCode() == destination) {
-                    if (distanceToCurrent <= brakeDistance) {
-                        distanceToNextWaypoint = distanceToCurrent;
-                    }
-                }
-                // detect stop, lock, capacity and exclusions removed already
-                String reason = computeStopReason(curr, next, false);
-                if (next != null && reason != null) {
-                    if (distanceToCurrent <= brakeDistance) {
-                        distanceToNextWaypoint = distanceToCurrent;
-                    }
-                }
-            }
-            totalDistance += last.distanceTo(curr);
-            last = curr;
-            curr = next;
-            // next weasel and next way point already found
-            if (distanceToNextVehicle != Double.POSITIVE_INFINITY
-                    && distanceToNextWaypoint != Double.POSITIVE_INFINITY) {
-                break;
-            }
-        }
-
-        // check output weasels at last way point
-        if (last instanceof zFTS_Waypoint) {
-            zFTS_Waypoint stop = (zFTS_Waypoint) last;
-            for (zFTS_Entity1 weasel : stop.getOutputWeasels()) {
-                if (weasel != this) {
-                    double distanceToVehicle = totalDistance + stop.distanceTo(weasel);
-                    if (distanceToVehicle < safeDistance) {
-                        if (distanceToVehicle < distanceToNextVehicle) {
-                            distanceToNextVehicle = distanceToVehicle;
-                        }
-                    }
-                }
-            }
-        }
-
-        // emergency brake
-        if (distanceToNextVehicle <= vehicleDistance) {
-            currentSpeed = 0;
-            return true;
-        }
-        // emergency brake
-        if (distanceToNextWaypoint <= 0) {
-            currentSpeed = 0;
-            return true;
-        }
-        if (distanceToNextVehicle <= safeDistance) {
-            return true;
-        }
-        if (distanceToNextWaypoint <= brakeDistance) {
-            return true;
-        }
-        return false;
     }
 
     public boolean isAt(zFTS_Waypoint waypoint) {
@@ -608,98 +418,13 @@ public class zFTS_Entity1 extends Entity {
         return lastWaypointCode == code;
     }
 
-    public boolean isBetween(int fromCode, int toCode) {
-        return lastWaypointCode == fromCode && nextWaypointCode == toCode;
-    }
-
-    public String computeStopReason(zFTS_Waypoint _from, zFTS_Waypoint _to, boolean requestCapacity) {
-        if (controller == null) {
-            return "no controller";
-        }
-        // check route
-        if (_from == null || _to == null) {
-            return "no route";
-        }
-        // force stop
-        if (_from.isForceStop() && to == _from && !isAt(to)) {
-            return "force stop at " + _from;
-        }
-        // lock
-        if (_from.isLocked()) {
-            return "lock at " + _from;
-        }
-        return null;
-    }
-
-    @SuppressWarnings("unused")
-    public void onArrived(zFTS_Waypoint prev, zFTS_Waypoint at) {
-        arrived = true;
-        if (at.getWaypointCode() != 0) {
-            lastWaypointCode = at.getWaypointCode();
-            nextWaypointCode = 0;
-            if (at.getWaypointCode() == getCurrentDestination()) {
-                handleDestinationArrived(at);
-                lastReminder = core.now();
-            }
-        }
-    }
-
-    public void stopFTF() {
-        core.logError(this, "stopftf executed ");
-        accelerating = false;
-        deaccelerating = false;
-        posx = getInterpolatedPosx();
-        posy = getInterpolatedPosy();
-        posz = getInterpolatedPosz();
-        setMoving(false);
-        setMoveStartx(posx);
-        setMoveStarty(posy);
-        setMoveStartz(posz);
-        setMoveStopx(posx);
-        setMoveStopy(posy);
-        setMoveStopz(posz);
-        setMoveStartTime(core.now());
-        setMoveStopTime(core.now());
-        if (lastWaiting == 0) {
-            lastWaiting = core.now();
-        }
-    }
-
-    public void handleDestinationArrived(zFTS_Waypoint waypoint) { // Abfragen ob letzte Destination erreicht ist, wenn
-                                                                   // nicht und zusätzlich kein Telegramm vorhanden
-                                                                   // handlewithoutorder
-        core.logInfo(this, "arrive current destination waypoint " + waypoint);
-        stopFTF();
-        if (hasOrder()) {
-            // Abfragen ob allerletzte Destination erreicht wurde und entsprechende Logik
-            // einsetzen cn1
-        }
-        // no order
-    }
-
     public boolean hasOrder() {
         return poso != null;
-    }
-
-    public boolean isArrived() {
-        return arrived;
-    }
-
-    public void withinAlley(String prc) {
-        // handlen eines WTSK wenn aktuelle Position und Destination in gleicher "Gasse"
-        // was Endziel ist irrelevant bzw. regelt moveproddest Methode
-        // cn1 Ändern mit moving Abfrage !
-        moveOutMach();
-
-        moveproddestx(prc, true);
-        moveproddesty(prc, true);
-
     }
 
     public void moveOutMach() {
         // Methode für das standartisierte Herausfahren von Produktionsmaschine auf
         // WaypointStrecke
-        // this.arrived = false;
 
         if (this.posy == from.getPosy()) {// cn1 hier vermutlich falsch
             return;
@@ -710,46 +435,11 @@ public class zFTS_Entity1 extends Entity {
 
     }
 
-    public void outsideAlley(String prc) {
-        Entity goal = null;
-        if (prc.contains("Q")) {
-            goal = this.srcdest;
-        } else {
-            goal = this.destMach;
-        }
-        moveOutMach();
-        moveWeasel(from);
-        // handlen eines WTSK wenn aktuelle Position und Destination nicht in gleicher
-        // Gasse
-    }
-
-    public void outsideProd(String prc) {
-
-    }
-
-    /*
-     * public void handleWeaselWithoutOrder(zFTS_Waypoint waypoint) { // Austausch
-     * durch eigene Waypoint Entity cn1,
-     * destinationWaypoints.clear();
-     * if (homePosition != 0) {
-     * if (homePosition != waypoint.getWaypointCode()) {
-     * destinationWaypoints.add(homePosition);
-     * core.logInfo(this,
-     * "move weasel without order from " + waypoint.getWaypointCode() +
-     * " to home position "
-     * + homePosition);
-     * return;
-     * }
-     * 
-     * } // Releaselogik entfernt
-     * }
-     */
-
     public void setPosoOrder(zTG1_POSO Posorder) {
         this.poso = Posorder; // Telegramm Positionierung
         this.posoSrc = core.getEntityById(poso.Quelle);
         zFTS_Waypoint wp1 = allmap(poso.Quelle);
-        core.logError(this, "Mapping in FTF erfolgreich 68");
+        core.logInfo(this, "Mapping für POSO durchgeführt, Beauftragung nach " + wp1.getId());
         DestinationWay1.put(this.poso.telegramsubtype, wp1); // benötigten Code und Prozess
                                                              // abspeichern
     }
@@ -760,10 +450,9 @@ public class zFTS_Entity1 extends Entity {
         String zwqq = WTOrder.Quelle.replaceAll("\\.+$", "");
         this.destMach = core.getEntityById(zwst); // konkrete Zielentität
         this.srcdest = core.getEntityById(zwqq); // konkrete Quellentität
-        core.logError(this, "833 destprod ist " + destMach);
         zFTS_Waypoint lastdest1 = allmap(zwst);
         zFTS_Waypoint firstsrc = allmap(zwqq);
-        core.logError(this, "Beauftragung wtsk auf Förderer " + lastdest1 + " wegen Ziel " + destMach);
+        core.logInfo(this, "Beauftragung wtsk auf Förderer " + lastdest1 + " wegen Ziel " + destMach);
         if (firstsrc != null) {
             DestinationWay1.put("WTSK-Q", firstsrc); // eigentliche Quelle zuerst
         } else {
@@ -772,19 +461,6 @@ public class zFTS_Entity1 extends Entity {
         }
         DestinationWay1.put("WTSK-Z", lastdest1); // eigentliches Ziel
 
-    }
-
-    public zFTS_Waypoint mapWPCode(zTG1_POSO Posorder) {
-
-        boolean found = false;
-        for (zFTS_Waypoint element : allWaypoints) { // Vergleichen der ID mit allen WaypointIDs -> muss nur ID
-                                                     // enthalten nicht 100%ig übereinstimmen cn1
-            if (Posorder.Quelle.contains(element.getId())) {
-                found = true;
-                return element;
-            }
-        }
-        return null;
     }
 
     public zFTS_Waypoint allmap(String dest) {
@@ -798,16 +474,6 @@ public class zFTS_Entity1 extends Entity {
         }
         return this.calcDest(core.getEntityById(dest));
 
-    }
-
-    public zFTS_Waypoint mapwp(String dest) {
-
-        for (zFTS_Waypoint element : allWaypoints) {
-            if (element.getId().contains(dest)) {
-                return element;
-            }
-        }
-        return null;
     }
 
     public zFTS_Waypoint calcDest(Entity zDest) { // Berechne kürzeste Distanz //CN1 Achtung es sollen eig nicht alle
@@ -838,8 +504,11 @@ public class zFTS_Entity1 extends Entity {
         }
 
         return mindist;
-        // Destprod.put(mindist, element);
 
+    }
+
+    public boolean hasDestination() {
+        return !this.DestinationWay1.isEmpty();
     }
 
     // return mindist;
@@ -851,7 +520,7 @@ public class zFTS_Entity1 extends Entity {
     public void handleSrcTransfer(long timeEnd, String process) { // Allgemeine HU Transfer Methode auf FTF
         blockedTransfer = true;
         if (this.srcdest != null) {
-            core.logError(this, " in transfer method");
+            core.logInfo(this, " jetzt Durchführung der HU Aufnahmelogik ");
             if (srcdest.hasItem()) {
                 Item HU = srcdest.getFirstItem();
                 if (HU.getId().equals(wtorder.HU_Nummer)) { // cn1 korrekte HU ID Prüfung
@@ -893,6 +562,7 @@ public class zFTS_Entity1 extends Entity {
     public void handleDestTransfer(long timeEnd) { // time Änderung zu Endtime
         blockedTransfer = true;
         if (this.destMach != null) {
+            core.logInfo(this, " jetzt Durchführung der HU Abgabelogik ");
             if (this.hasItem()) {
                 Item HU = this.getFirstItem();
                 this.moveItem(destMach, HU, 0);
@@ -950,15 +620,17 @@ public class zFTS_Entity1 extends Entity {
                         info.HU_Nummer = wtorder.HU_Nummer;
                         info.Quelle = destMach.getId();
                         info.CP = destMach.getId();
-
+                        break;
                     case "MPOE": // Zeit abgelaufen nach POSO
                         info.HU_Nummer = poso.HU_Nummer;
                         info.Quelle = posoSrc.getId();
                         info.CP = posoSrc.getId();
+                        break;
                     case "MTRE": // nach kurzer Zeit trotz wtsk kein item auf Förderer
                         info.HU_Nummer = wtorder.HU_Nummer;
                         info.Quelle = destMach.getId();
                         info.CP = destMach.getId();
+                        break;
 
                 }
 
@@ -1008,43 +680,6 @@ public class zFTS_Entity1 extends Entity {
         }
     }
 
-    public String getFleetId() {
-        return fleetId;
-    }
-
-    public zTG1_POSO getPoso() {
-        return poso;
-    }
-
-    public int getLastWaypointCode() {
-        return lastWaypointCode;
-    }
-
-    public int getNextWaypointCode() {
-        return nextWaypointCode;
-
-    }
-
-    public void setLastWaypointCode(int lastWaypointCode) {
-        this.lastWaypointCode = lastWaypointCode;
-
-    }
-
-    public void setNextWaypointCode(int nextWaypointCode) {
-        this.nextWaypointCode = nextWaypointCode;
-    }
-
-    public int getCurrentDestination() {
-        if (!destinationWaypoints.isEmpty()) {
-            return destinationWaypoints.get(0);
-        }
-        return 0;
-    }
-
-    public boolean hasDestinatiion() {
-        return !destinationWaypoints.isEmpty();
-    }
-
     public void handleMPOE(int WP) {
         if (this.isAt(WP)) {
             this.controller.FTFOrderpast.remove(this.poso); // wichtig um FTF endgültig aus Zuweisung zu entfernen
@@ -1069,5 +704,26 @@ public class zFTS_Entity1 extends Entity {
         this.wtorder = null;
         DestinationWay1.clear();
         blockedTransfer = false;
+    }
+
+    public zFTS_Waypoint getHomewp() {
+        return to;
+    }
+
+    public String getFleetId() {
+        return fleetId;
+    }
+
+    public zTG1_POSO getPoso() {
+        return poso;
+    }
+
+    public int getLastWaypointCode() {
+        return lastWaypointCode;
+    }
+
+    public void setLastWaypointCode(int lastWaypointCode) {
+        this.lastWaypointCode = lastWaypointCode;
+
     }
 }

@@ -1,8 +1,5 @@
 package com.ssn.simulation.plugin.zFTS1;
 
-import com.ssn.simulation.telegrams.Telegram;
-
-import java.io.Serializable;
 
 public class zTG1_INFO extends zTG1 {
 

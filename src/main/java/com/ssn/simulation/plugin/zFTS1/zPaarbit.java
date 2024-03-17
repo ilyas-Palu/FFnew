@@ -1,9 +1,5 @@
 package com.ssn.simulation.plugin.zFTS1;
 
-import java.util.Map;
-import java.util.Map.Entry;
-
-import com.ssn.simulation.core.Entity;
 import com.ssn.simulation.core.Event;
 
 public class zPaarbit extends Event {

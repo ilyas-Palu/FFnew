@@ -7,7 +7,6 @@ import com.ssn.simulation.builders.EntityBuilder;
 import com.ssn.simulation.core.Entity;
 import com.ssn.simulation.editor.EntityConverter;
 import com.ssn.simulation.functions.UserFunction;
-import com.ssn.simulation.plugin.Plugin;
 
 public class PluginMain
 		implements com.ssn.simulation.plugin.Plugin {

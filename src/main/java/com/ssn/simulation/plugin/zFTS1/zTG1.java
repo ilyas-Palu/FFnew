@@ -1,7 +1,6 @@
 package com.ssn.simulation.plugin.zFTS1;
 
 import com.ssn.simulation.telegrams.Telegram;
-import com.ssn.simulation.telegrams.weasel.WeaselTelegram;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -338,13 +337,13 @@ public class zTG1 implements Telegram, Serializable {
 
     };
 
-    public void setHeaderfields(zTG1 header){
+    public void setHeaderfields(zTG1 header) {
         this.sender = header.sender;
         this.receiver = header.receiver;
         this.Handshake = header.Handshake;
         this.sequencenumber = header.sequencenumber;
         this.Endekennzeichen = header.Endekennzeichen;
         this.Commerror = header.Commerror;
-        this.telegramsubtype  = header.telegramsubtype;
+        this.telegramsubtype = header.telegramsubtype;
     }
 }
