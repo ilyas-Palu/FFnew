@@ -18,6 +18,7 @@ public class zTG1 implements Telegram, Serializable {
     public static final String TELEGRAM_DELIMITER_END_2 = "##";
     public static final String TELEGRAM_DELIMITER_HEADER1 = "MFSEWM..";
     public static final String TELEGRAM_DELIMITER_HEADER2 = "TOMPROD.";
+    public static final String TELEGRAM_DELIMITER_HEADER_KTECH = "FTS-001";
     public static final String TELEGRAM_DELIMITER_ENDING = "##";
 
     public static final String Handshake1 = "D";
@@ -149,51 +150,6 @@ public class zTG1 implements Telegram, Serializable {
 
     public static final void write(ByteArrayOutputStream stream, int bytes, Object value) throws IOException {
         stream.write(ByteBuffer.allocate(bytes).put(value.toString().getBytes()).array());
-    }
-
-    public static final int getCrc16(byte[] bytes) {
-        short poly = (short) 0xa001;
-        int[] table = new int[256];
-        int unsignedPoly = poly & 0xffff;
-        for (int i = 0; i < table.length; ++i) {
-            int r = i;
-            for (int j = 0; j < 8; ++j) {
-                if ((r & 1) != 0) {
-                    r = (r >>> 1) ^ unsignedPoly;
-                } else {
-                    r >>>= 1;
-                }
-            }
-            table[i] = (short) r;
-        }
-        int value = 0;
-        for (int i = 0; i < bytes.length; ++i) {
-            byte b = bytes[i];
-            value = (table[(value ^ b) & 0xff] ^ (value >>> 8)) & 0xffff;
-        }
-        return value;
-    }
-
-    public static final int checkCrc16(String telegramValue) { // Anpassen zum Beispiel auf Telegrammsubtyp notwendig
-                                                               // cn1 Wenn hier Sequencenumber gecheckt wird hätte es
-                                                               // Performance Vorteile -> Entscheidung dagegen
-                                                               // wegen Erweiterbarkeit
-        try {
-            int checksum = Integer.valueOf(telegramValue.substring(1, 6).trim());
-            if (checksum == 0) {
-                return 0; // ignore
-            } else {
-                String telegram = telegramValue.substring(6, telegramValue.length() - 1);
-                int expected = getCrc16(telegram.getBytes());
-                if (checksum == expected) {
-                    return 1; // ok
-                } else {
-                    return -1; // not ok
-                }
-            }
-        } catch (Exception e) {
-            return -2;
-        }
     }
 
     public String getFTFId() {

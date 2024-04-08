@@ -33,6 +33,8 @@ public class zFTS1 extends Entity {
     protected int senderPort;
     protected int receiverPort;
     protected String fleetId;
+    protected boolean ignoreHuId;
+
     protected int FTFControllerID;
     @JsonIgnore
     protected transient Map<String, zFTS_Entity1> FTSR; // FTS Klasse
@@ -62,6 +64,7 @@ public class zFTS1 extends Entity {
         this.receiverPort = 0;
         this.fleetId = "121212";
         this.senderId = 321;
+        this.ignoreHuId = false;
     }
 
     // bei Bearbeitung der Attribute
@@ -73,6 +76,8 @@ public class zFTS1 extends Entity {
         setIntegerProperty("senderPort", senderPort, 0, "FTF Controller");
         setIntegerProperty("receiverPort", receiverPort, 0, "FTF Controller");
         setStringProperty("fleetId", fleetId, "FTF Controller");
+        setBooleanProperty("ignoreHuId", ignoreHuId, "FTF Controller");
+
     }
 
     // bei Bearbeitung der Eigenschaften
@@ -84,6 +89,7 @@ public class zFTS1 extends Entity {
         this.senderPort = getIntegerProperty("senderPort");
         this.receiverPort = getIntegerProperty("receiverPort");
         this.fleetId = getStringProperty("fleetId");
+        this.ignoreHuId = getBooleanProperty("ignoreHuId");
     }
 
     // Kategorie unter Menübaum
@@ -106,14 +112,14 @@ public class zFTS1 extends Entity {
                                                // korrekte Reihenfolge
         this.FTFOrderpast = new LinkedHashMap<>(); // neue Map zur Archivierung
         for (Entity entity : core.getEntities()) {
-            if (entity instanceof zFTS_Entity1) { // cn1 Ersetzen mit eigener Entität
+            if (entity instanceof zFTS_Entity1) {
                 zFTS_Entity1 FTF = (zFTS_Entity1) entity;
                 if (FTF.getFleetId().equals(fleetId)) {
                     this.FTSR.put(FTF.getId(), FTF);
                 }
             }
             if (entity instanceof zFTS_Waypoint) {
-                zFTS_Waypoint waypoint = (zFTS_Waypoint) entity; // cn1 Ersetzen mit eigener Entität
+                zFTS_Waypoint waypoint = (zFTS_Waypoint) entity;
                 if (waypoint.getWaypointCode() != 0) {
                     if (waypoint.getFleetId().equals(fleetId)) {
                         this.waypoints.put(waypoint.getWaypointCode(), waypoint);
@@ -124,13 +130,7 @@ public class zFTS1 extends Entity {
                 connector = (ZFTS_Connector) entity;
             }
         }
-        this.orders = new ArrayList<>(); // ersetzen mit eigener Telegrammliste der neuen Telegrammklassen
-        // connector = CoreUtils.getConnectorNGKP(core, senderId, this); // ersetzen mit
-        // zFTS Connector, evtl nicht
-        // notwendig da keine unterschiedlichen Conveyor
-        // Systeme
-        // Somit basic core Entity Abfrage evtl
-        // ausreichend cn1
+        this.orders = new ArrayList<>();
         core.addNotifier(this);
     }
 
@@ -138,17 +138,15 @@ public class zFTS1 extends Entity {
     public void onNotify() { // angepasst
         Collection<zFTS_Entity1> all = FTSR.values();
         for (zFTS_Entity1 FTF : all) {
-            // if (!FTF.isAt(1) || FTF.poso != null || FTF.wtorder != null) {
             try {
                 FTF.onNotify();
             } catch (Exception e) {
                 core.logError(this, " FTF mit ID " + FTF.getId() + "hat unbekannten Fehler: " + e
                         + " alle Aufträge des FTF werden abgebrochen ");
                 FTF.DestinationWay1.clear();
-                FTF.moveWeasel(FTF.getHomewp());
+                FTF.moveFTF(FTF.getHomewp());
             }
         }
-        // }
     }
 
     @Override
@@ -161,8 +159,6 @@ public class zFTS1 extends Entity {
     public String getTelegramHandlerId() {
         return Integer.toString(senderId);
     }
-
-    // Beginn Callback Methods
 
     // Aufgerufen wenn ein Telegramm an Entität übergeben wird cn1 -> eigener
     // Connector wird Controller Telegramm weiterleiten (bzw. FTS nach oben)
@@ -186,27 +182,21 @@ public class zFTS1 extends Entity {
 
             handleWTSK(TWTSK);
 
-            // erstmal nur Logik inklusive vorherigem POSO Telegramm
-            // Zielförderer Koordinaten
-            // Logik Fahrverarbeitung
         }
-        // Logik für Telegrammverarbeitung Richtung SAP
-
-        // connector.sendTelegram(rt1); //vermutlich cn1
 
     }
 
-    // wird normalerweise über input oder output Entity aufgerufen
+    // wird normalerweise über input oder output Entity aufgerufen, hier zusätzlich
+    // manuell
     @Override
     public void onTrigger(Entity entity) {
         super.onTrigger(entity);
-        if (!FTFOrder.isEmpty()) {// For Schleife einfügen (Vermutlich für mehrere Telegramme auf einmal)
+        if (!FTFOrder.isEmpty()) {
             // Erster Schlüssel
             try {
                 Entry<zFTS_Entity1, zTG1> firstEntry = this.FTFOrder.entrySet().iterator().next();
                 zFTS_Entity1 firstKey = firstEntry.getKey(); // FTF
-                zTG1 firstValue = firstEntry.getValue(); // Telegramm, um allgemeine Logik/Subtypunabhängig erweitern,
-                                                         // Instanzabfrage erst nach nächstem IF, Reihenfolge beachten
+                zTG1 firstValue = firstEntry.getValue();
                 System.out.println("Der erste Schlüssel ist: " + firstKey + ", sein Wert ist: " + firstValue);
                 //
                 this.FTFOrder.remove(firstKey); // löschen des extrahierten Eintrges um nächsten zu nehmen
@@ -214,15 +204,12 @@ public class zFTS1 extends Entity {
                     this.FTFOrderpast.put(firstValue, firstKey); // Archivierung
                     zTG1_POSO posoValue = (zTG1_POSO) firstValue;
                     if (firstKey != null) { // Standart Befehl FTF Bewegung aber konkret Förderer der Positionierung
-                        // Vorsicht destinationpoints können sich bei unserem TG nicht aus Inhalt
-                        // gezogen werden
+
                         core.logInfo(this, "assign Poso order " + " to FTF " + firstKey);
                         firstKey.setPosoOrder(posoValue); // vorheriger Downcast notwendig
                         posoValue.setFTFId(firstKey.getId());
                         posoValue.setAssigned(true);
 
-                        //
-                        // firstKey.handleStartNotification();
                     }
                 }
                 if (firstValue instanceof zTG1_WTSK) {
@@ -236,13 +223,13 @@ public class zFTS1 extends Entity {
 
                 }
             } catch (NullPointerException e) {
-                // Hier können Sie die Behandlung für eine NullPointerException einfügen
+                // Hier Behandlung für eine NullPointerException einfügen
                 core.logError(this,
                         "NullPointerException beim Zugriff auf den ersten Eintrag der FTFOrder-Map: " + e.getMessage());
                 FTFOrder.clear();
                 return;
             } catch (NoSuchElementException e) {
-                // Hier können Sie die Behandlung für das Entfernen eines nicht vorhandenen
+                // Hier Behandlung für das Entfernen eines nicht vorhandenen
                 // Elements einfügen
                 core.logError(this,
                         "NoSuchElementException beim Entfernen eines Elements aus der FTFOrder-Map: " + e.getMessage());
@@ -252,10 +239,7 @@ public class zFTS1 extends Entity {
 
     }
 
-    // ENDE Callback Methods
-    // ---------------------------
-
-    // Beginn zFunktionen und Telegrammverarbeitung
+    // Standard senden an Connector, aufrufen aus FTF heraus
 
     public void sendTelegram(zTG1 telegram, Entity sender) {
         if (connector != null && telegram != null) {
@@ -268,9 +252,6 @@ public class zFTS1 extends Entity {
                 connector.sendTelegram(telegram);
                 core.logInfo(this, "Telegramm hat Controller erreicht Typ: " + telegram.telegramsubtype);
             }
-            // cn1 Konver
-            // connector.sendTelegram(sender, telegram); // sende Funktion Connector
-            // eingebaut
         } else {
             core.logError(this, "unable to send telegram, no known telegrammtype: " + telegram);
         }
@@ -290,7 +271,7 @@ public class zFTS1 extends Entity {
             return;
         }
         onTrigger(this);
-        ; // Dictionary einbauen mit passendem FTF
+        ;
 
     }
 
@@ -303,7 +284,7 @@ public class zFTS1 extends Entity {
                 zFTS_Entity1 ftfkey = entry.getValue();
                 zTG1 TGvalue = entry.getKey();
 
-                if (TWtsk.Paarbit.equals("X")) { // cn1 unsicher welches Zeichen Paarbit kennzeichnet
+                if (TWtsk.Paarbit.equals("X")) { // Paarbit, Logik ausgeklammert, da noch nicht fertig
 
                     // this.handlePaarbit(TWtsk);
                     // return;
@@ -317,9 +298,8 @@ public class zFTS1 extends Entity {
                         zFTS_Entity1 FTF = ftfkey;
                         core.logError(this, "passender POSO zu WTSK gefunden ");
                         FTFOrder.put(FTF, TWtsk); // FTFOrder befüllen für onTrigger Methode
-                        // Logik assign ftf zu Telegram und Abfrage Koordinaten destination
                         onTrigger(this);
-                        return; // weiterführende Logik notwendig cn
+                        return;
 
                     }
                 }
@@ -350,10 +330,7 @@ public class zFTS1 extends Entity {
         zPaarbit pbEvent = new zPaarbit(core.now() + 300000, this, wtsk);
     }
 
-    public zFTS_Entity1 getFreeFTFInit(int waypoint) { // Anpassen auf initialen Bahnhof und Methodenergänzung cn1
-        // jetzt durch Weasel Liste iterieren und erstes FTF wo Home Position =
-        // current ist, verwenden (+not moving etc.), dann FTF destination zum
-        // Auslagerstich übergeben
+    public zFTS_Entity1 getFreeFTFInit(int waypoint) {
 
         if (waypoint != 0) {
             Collection<zFTS_Entity1> all = FTSR.values();
@@ -392,4 +369,10 @@ public class zFTS1 extends Entity {
 
         }
     }
+
+    public boolean isIgnoreHuId() {
+        return ignoreHuId;
+    }
+
+
 }
