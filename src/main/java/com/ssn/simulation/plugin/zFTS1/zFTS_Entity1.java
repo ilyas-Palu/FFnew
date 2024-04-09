@@ -34,7 +34,7 @@ public class zFTS_Entity1 extends Entity {
     @JsonIgnore
     protected transient zFTS_Waypoint from; // use like lastwaypointcode
     @JsonIgnore
-    protected transient zFTS_Waypoint to; // currently probaby home waypoint
+    protected transient zFTS_Waypoint to; // currently used as home waypoint
     @JsonIgnore
     protected transient Map<String, zFTS_Waypoint> DestinationWay1; // Alle Destinations per Code
     @JsonIgnore
@@ -119,7 +119,7 @@ public class zFTS_Entity1 extends Entity {
                 if (entity instanceof zFTS_Waypoint) {
                     zFTS_Waypoint waypoint = (zFTS_Waypoint) entity;
                     allWaypoints.add(waypoint); // Speichern aller Waypoints
-                    if (waypoint.getWaypointCode() == startPosition) { // Zuweisen über startposition Code!
+                    if (waypoint.getWaypointCode() == startPosition) { // Zuweisen über startposition Code
                         if (waypoint.getFleetId().equals(fleetId)) {
                             to = waypoint; // Auffüllen to
                             from = to;
@@ -139,7 +139,6 @@ public class zFTS_Entity1 extends Entity {
             setMoveStopx(to.getInterpolatedPosx());
             setMoveStopy(to.getInterpolatedPosy());
             setMoveStopz(to.getInterpolatedPosz());
-            // handleWeaselWithoutOrder(to); // Eventuell irrelevant, aber nachpflegen
             lastWaypointCode = to.getWaypointCode(); // übergeben homeposition aktuelle position
         }
     }
@@ -152,25 +151,22 @@ public class zFTS_Entity1 extends Entity {
         if (to == null) {
             return;
         }
-        // arrive way point
-        // Abfrage ob Ziel gespeichert
         if (!isError()) {
             if (!isMoving()) {
                 if (!blockedTransfer) {
                     if (!DestinationWay1.isEmpty()) {
-                        // if (this.to.getWaypointCode() == 1) { // Allgemeinere Prozesslogik für WTSK
                         Entry<String, zFTS_Waypoint> entry = DestinationWay1.entrySet().iterator().next();
                         zFTS_Waypoint zwp = entry.getValue();
                         String vProcess = entry.getKey();
                         // Abfrage ob Waypointcodes passen und diese noch nicht erreicht
-                        if (vProcess.equals("POSO")) { // besser wieder ändern auf poso.subtype
+                        if (vProcess.equals("POSO")) { // besser wieder ändern auf poso.subtype bzw. statisches Attribut
                             this.posoTime = core.now();
                             if ((zwp.getWaypointCode() == 11 || zwp.getWaypointCode() == 12
                                     || zwp.getWaypointCode() == 13) && this.isAt(to)) { // geändete von 1 auf to
                                 core.logInfo(this, "POSO wurde erkannt");
-                                this.moveWeasel(zwp);
+                                this.moveFTF(zwp);
                                 lastWaypointCode = zwp.getWaypointCode(); // Übergabe aktuelle Position
-                                from = zwp; // eig Rendundanz mit lastwaypointcode, evtl nur from Nutzung
+                                from = zwp; // Teiweise Rendundanz zwischen Lastwaypointcode & from
                                 return;
                             }
 
@@ -185,26 +181,17 @@ public class zFTS_Entity1 extends Entity {
                                 }
                             }
 
-                            this.DestinationWay1.remove(vProcess);// besser eher am Ende der Methode 1mal
+                            this.DestinationWay1.remove(vProcess);
 
-                            // ausführen
-                            // poso = null; //unsicher cn1
                             return;
 
-                            // }
                         }
 
                         if (this.wtorder != null) {
                             if (vProcess.contains("WTSK")) {
-                                // if (this.isAt(from)) { // Sicherheitsabfrage bzw. auch ob auf einem Waypoint
-                                // überhaupt
-                                // Wtorder Logik -> Schritt 1 destwp (mittig) beauftragen/fahren
                                 if (from == zwp) { // lastdest erreicht (bzw. Quellplatz)
                                     if (vProcess.contains("Q")) {
                                         if (lastWaypointCode > 50) {// ->im Produktionsnetz
-                                            // Entity moveProd = this.calcproddest(); // vermutlich obsolet cn1
-                                            // if (moveProd instanceof zFTS_Waypoint) {
-                                            // zFTS_Waypoint wpdir = (zFTS_Waypoint) moveProd;
                                             this.moveproddestx(vProcess, false);
                                             if (!isMoving()) {
                                                 this.moveproddesty(vProcess, false);
@@ -221,12 +208,9 @@ public class zFTS_Entity1 extends Entity {
                                                 return;
                                             }
                                         }
-                                        // }
-                                        // INFO Telegramm
+
                                     } else {
-                                        if (lastWaypointCode > 50) { // evtl obsolete/unvollständige Abfrage -> Auch
-                                                                     // Transfer außerhalb
-                                                                     // wpnetz möglich!
+                                        if (lastWaypointCode > 50) {
                                             this.moveproddestx(vProcess, false);
                                             if (!isMoving()) {
                                                 this.moveproddesty(vProcess, false);
@@ -241,13 +225,6 @@ public class zFTS_Entity1 extends Entity {
                                             return;
                                         }
 
-                                        // item transfer cn1
-
-                                        // Item Transfer an normale Fördertechnik cn1
-
-                                        // WTCO Telegramm
-
-                                        // evtl Einbau clear WTOrder
                                         this.wtorder = null;
                                         poso = null;
                                     }
@@ -260,14 +237,14 @@ public class zFTS_Entity1 extends Entity {
                                             from = from.nextWaypoint(zwp.getWaypointCode());
                                             core.logInfo(this,
                                                     "Waypoint Routing erfolgreich Beauftragung nach " + from.getId());
-                                            this.moveWeasel(from);
+                                            this.moveFTF(from);
                                             lastWaypointCode = from.getWaypointCode();
                                             return;
                                         }
                                     } else {
                                         if (lastWaypointCode > 50) {
                                             if (!isMoving()) {
-                                                moveWeasel(from);
+                                                moveFTF(from);
                                                 return;
                                             }
                                         } // cn1
@@ -289,14 +266,13 @@ public class zFTS_Entity1 extends Entity {
 
                         if (!this.isAt(to) && !this.hasItem() && (lastWaypointCode < 11 || lastWaypointCode > 14)) {
                             if (this.isAt(from)) {
-                                // moveWeasel(to); // hier routing zum nächsten WP einbauen wie oben bei wtsk !
                                 if (from.nextWaypoint(to.getWaypointCode()) != null) { // rendundante logik mit wtsk
                                                                                        // evtl
-                                                                                       // auslagern cn1
+                                                                                       // auslagern
                                     from = from.nextWaypoint(to.getWaypointCode());
                                     core.logInfo(this,
                                             "Waypoint Routing erfolgreich, Beauftragung nach" + from.getId());
-                                    this.moveWeasel(from);
+                                    this.moveFTF(from);
                                     lastWaypointCode = from.getWaypointCode();
                                     return;
                                 }
@@ -304,15 +280,12 @@ public class zFTS_Entity1 extends Entity {
                                 this.moveOutMach();
                                 if (!this.isMoving()) {
 
-                                    moveWeasel(from);
+                                    moveFTF(from);
                                 }
                             }
                             return;
                         }
                     }
-                    // if (this.isAt(to) && this.wtorder != null) {
-                    // this.wtorder = null; //cn1 unsicher ob Funktionalität gesichert
-                    // }
                 }
             }
         }
@@ -324,9 +297,6 @@ public class zFTS_Entity1 extends Entity {
         setMoving(false);
 
     }
-    // Logik welche eventuell über alle zWaypoint Instanzen iteriert mit isAt
-    // Abfrage -> Herausfinden ob waypointfreie Logik ausgeführt wird
-    // }
 
     public void moveproddestx(String ent, boolean rev) {
         float prx = 0;
@@ -338,7 +308,7 @@ public class zFTS_Entity1 extends Entity {
             prx = (float) this.srcdest.getPosx();
             // pry = (float) this.srcdest.getPosy();
         }
-        if (rev) { // cn1 evtl durch switch ersetzen
+        if (rev) { // mittlerweile irrelevant
             prx = (float) this.from.getPosx();
         }
         if (this.posx - prx < 0.03 && this.posx - prx > -0.03) { // Abfrage ob Position bereits stimmt
@@ -348,8 +318,6 @@ public class zFTS_Entity1 extends Entity {
         // setMoving(true);
         this.moveWithSpeed(prx, from.getPosy(), destMach.getPosz(), 0);
 
-        // Zwischenkoordinaten als Array z.B. in Objekt speichern und in onNotify
-        // abfragen
     }
 
     public void moveproddesty(String ent, boolean rev) {// Abändern auf y Fahrt Logik (WP unabhängig!)
@@ -366,8 +334,8 @@ public class zFTS_Entity1 extends Entity {
             buf1 = (float) ((srcdest.getSizey()));
         }
 
-        if (rev) { // cn1 unbedingt durch switch ersetzen
-            pry = (float) this.from.getPosy();
+        if (rev) {
+            pry = (float) this.from.getPosy(); // mittlerweile irrelevant
         }
 
         if (pry > this.getPosy()) { // Anpassung mitsamt eigener Größe für Berechnung
@@ -379,16 +347,11 @@ public class zFTS_Entity1 extends Entity {
         if (this.posy - buf1 < 0.03 && posy - buf1 > -0.03 || rev) { // Abfrage ob Position bereits stimmt
             return;
         }
-        // setMoving(true);
         this.moveWithSpeed(prx, buf1, from.getPosz(), 0);
 
-        // Zwischenkoordinaten als Array z.B. in Objekt speichern und in onNotify
-        // abfragen
     }
 
     public void moveWithSpeed(double x1, double y1, double z1, long t1) {
-
-        // double tv = this.travelSpeed;
 
         double realDistanceX = Math.abs(this.posx - x1); // Ergebniss immer positiv (Betrag)
         double realDistanceY = Math.abs(this.posy - y1); // Ergebniss immer positiv (Betrag)
@@ -403,9 +366,8 @@ public class zFTS_Entity1 extends Entity {
 
     }
 
-    public void moveWeasel(zFTS_Waypoint waypoint) {
-        // if (maxDistance > distanceToWaypoint) {// cn1 not reversed operator
-        // starke Abweichung von Referenzentitäten !
+    public void moveFTF(zFTS_Waypoint waypoint) {
+
         this.moveWithSpeed(waypoint.getPosx(), waypoint.getPosy(), waypoint.getPosz(), 0);
 
     }
@@ -437,7 +399,7 @@ public class zFTS_Entity1 extends Entity {
         // Methode für das standartisierte Herausfahren von Produktionsmaschine auf
         // WaypointStrecke
 
-        if (this.posy == from.getPosy()) {// cn1 hier vermutlich falsch
+        if (this.posy == from.getPosy()) {
             return;
         }
         ;
@@ -491,9 +453,6 @@ public class zFTS_Entity1 extends Entity {
                                                   // zWaypoints betrachtet werden (nur Produktionsnetz) evtl Einbau
                                                   // Fleetid, nur mittlere PN WP checken!
 
-        // double zxp = zDest.getPosx();
-        // double zxy = zDest.getPosy();
-
         zFTS_Waypoint mindist = null;
         float dist1 = 99999; // Sauberer: positive unendlichkeit einbauen
         float comp1 = 0;
@@ -509,9 +468,6 @@ public class zFTS_Entity1 extends Entity {
                     mindist = element;
                 }
             }
-
-            // if (dist1 < mindist) {
-            // ele6 = dist1;
         }
 
         return mindist;
@@ -521,8 +477,6 @@ public class zFTS_Entity1 extends Entity {
     public boolean hasDestination() {
         return !this.DestinationWay1.isEmpty();
     }
-
-    // return mindist;
 
     public void setAssigned(boolean b) {
         this.assigned = b;
@@ -545,7 +499,6 @@ public class zFTS_Entity1 extends Entity {
                 } else {
                     this.handleMMHU();
                 }
-                // }
             } else if (lastWaypointCode > 50) {
                 if (core.now() < timeEnd) {
                     zInfo_MTRE checkMtre = new zInfo_MTRE(core.now() + 1000);
@@ -554,7 +507,7 @@ public class zFTS_Entity1 extends Entity {
                     checkMtre.setFTF(this);
                     checkMtre.setProcess(process);
                     core.addEvent(checkMtre);
-                    // warten auf Item Logik, evtl über Event oder Notify Methode cn1
+
                     return;
                 } else {
                     this.handleMTRE();
@@ -565,12 +518,10 @@ public class zFTS_Entity1 extends Entity {
 
         blockedTransfer = false;
 
-        // this.infoTG(null,);
-
     }
 
     // Transfer auf Zielplatz
-    public void handleDestTransfer(long timeEnd) { // time Änderung zu Endtime
+    public void handleDestTransfer(long timeEnd) { 
         blockedTransfer = true;
         if (this.destMach != null) {
             core.logInfo(this, " jetzt Durchführung der HU Abgabelogik ");
@@ -580,21 +531,19 @@ public class zFTS_Entity1 extends Entity {
                 this.wtcoTG(HU);
                 // cn1 wtco Telegramm einbauen
                 if (lastWaypointCode > 50) {
-                    Entity mapped = this.mapPaarbit(destMach); // mapping einbauen cn1
+                    Entity mapped = this.mapPaarbit(destMach);
                     if (mapped != null) {
+
                         for (Map.Entry<zTG1_WTSK, Entity> entry : controller.paarbitWtsk.entrySet()) {
                             if (entry.getValue() == mapped) { // richtiger Eintrag gefunden
                                 if (mapped.hasItem()) {
                                     setWTSKOrder(entry.getKey());
                                     controller.paarbitWtsk.remove(entry.getKey());  
                                 }
-                                // handleesrctransfer
-                                // Ziel herausziehen und in Routingtabelle
-                                // wtsk Eintrag korrekt aus Tabelle löschen
-                            }
 
-                        }
+                            }
                     }
+                }
                     this.moveOutMach();
                 }
             } else if (core.now() < timeEnd) {
@@ -603,9 +552,7 @@ public class zFTS_Entity1 extends Entity {
                 destEvent.setEndTime(timeEnd);
                 destEvent.setFTF(this);
                 core.addEvent(destEvent);
-                // this.core.addEvent(new com.ssn.simulation.core.Event(this.core.now() +
-                // 3000));
-                // Logik warten ? cn1
+
             } else {
 
             }
@@ -698,8 +645,6 @@ public class zFTS_Entity1 extends Entity {
             conf.Reserve = "";
             conf.Endekennzeichen = zTG1.TELEGRAM_DELIMITER_ENDING;
             this.sendTelegram(conf);
-            // evtl vollkommen obsolet da wtco fast genau gleich wie wtsk, vermutlich nur
-            // anpassung bei error/fehler cn1
 
         } catch (Exception e) {
             core.logError(this, "Problem bei WTCO Telegramm Erstellung " + e);
@@ -716,7 +661,7 @@ public class zFTS_Entity1 extends Entity {
     public void handleMPOE(int WP) {
         if (this.isAt(WP)) {
             this.controller.FTFOrderpast.remove(this.poso); // wichtig um FTF endgültig aus Zuweisung zu entfernen
-            this.moveWeasel(to);
+            this.moveFTF(to);
             this.infoTG(null, "MPOE");
             this.poso = null;
             this.posoSrc = null;
