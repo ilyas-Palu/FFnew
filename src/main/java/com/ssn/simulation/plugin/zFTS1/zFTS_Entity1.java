@@ -582,10 +582,12 @@ public class zFTS_Entity1 extends Entity {
                 if (lastWaypointCode > 50) {
                     Entity mapped = this.mapPaarbit(destMach); // mapping einbauen cn1
                     if (mapped != null) {
-                        for (Map.Entry<Entity, zTG1_WTSK> entry : controller.paarbitWtsk.entrySet()) {
-                            if (entry.getKey() == mapped) {
-                                setWTSKOrder(entry.getValue());
-
+                        for (Map.Entry<zTG1_WTSK, Entity> entry : controller.paarbitWtsk.entrySet()) {
+                            if (entry.getValue() == mapped) { // richtiger Eintrag gefunden
+                                if (mapped.hasItem()) {
+                                    setWTSKOrder(entry.getKey());
+                                    controller.paarbitWtsk.remove(entry.getKey());  
+                                }
                                 // handleesrctransfer
                                 // Ziel herausziehen und in Routingtabelle
                                 // wtsk Eintrag korrekt aus Tabelle löschen
@@ -613,12 +615,32 @@ public class zFTS_Entity1 extends Entity {
     }
 
     public Entity mapPaarbit(Entity destMach2) {// korrektes Mapping cn1
-        switch (destMach2.getId()) { // Wenn bestimmte Entitäten dann Abfrage
-            case "Halfauomatic":
-                return destMach2;
+        // switch (destMach2.getId()) { // Wenn bestimmte Entitäten dann Abfrage
 
+        String mach_r = destMach2.getId();
+
+        String[] parts = mach_r.split("-");
+
+        if (parts.length >= 4) {
+            String index_value1 = parts[0];
+            String r_value2 = parts[1];
+            String type_value3 = parts[2];
+            String number_value4 = parts[3];
+
+        } else {
+            return null;
         }
-        return null;
+
+        // Kürzel und Endnummer abändern
+
+        parts[2] = "VG"; // Parameter Einbau evtl
+        parts[3] = "02"; // Parameter Einbau evtl
+
+        String combinedString = String.join("-", parts);
+        Entity assignedVG = core.getEntityById(combinedString);
+
+        return assignedVG;
+
     }
 
     public void infoTG(Item HU, String MFSError) {
