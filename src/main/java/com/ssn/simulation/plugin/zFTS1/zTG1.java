@@ -190,7 +190,6 @@ public class zTG1 implements Telegram, Serializable {
             this.confarray = byteArray;
 
         } catch (UnsupportedEncodingException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
 

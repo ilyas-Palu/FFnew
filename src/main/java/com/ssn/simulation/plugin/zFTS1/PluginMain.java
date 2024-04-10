@@ -28,19 +28,16 @@ public class PluginMain
 
 	@Override
 	public List<UserFunction> registerUserFunctions() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public List<EntityBuilder> registerEntityBuilders() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public List<EntityConverter> registerEntityConverters() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
