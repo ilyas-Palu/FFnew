@@ -34,6 +34,7 @@ public class zFTS1 extends Entity {
     protected int receiverPort;
     protected String fleetId;
     protected int FTFControllerID;
+    protected int paarbitDuration_s;
     @JsonIgnore
     protected transient Map<String, zFTS_Entity1> FTSR; // FTS Klasse
     @JsonIgnore
@@ -62,6 +63,7 @@ public class zFTS1 extends Entity {
         this.receiverPort = 0;
         this.fleetId = "121212";
         this.senderId = 321;
+        this.paarbitDuration_s = 300;
     }
 
     // bei Bearbeitung der Attribute
@@ -73,6 +75,7 @@ public class zFTS1 extends Entity {
         setIntegerProperty("senderPort", senderPort, 0, "FTF Controller");
         setIntegerProperty("receiverPort", receiverPort, 0, "FTF Controller");
         setStringProperty("fleetId", fleetId, "FTF Controller");
+        setIntegerProperty("paarbitDuration", paarbitDuration_s, "FTF Controller");
     }
 
     // bei Bearbeitung der Eigenschaften
@@ -84,6 +87,7 @@ public class zFTS1 extends Entity {
         this.senderPort = getIntegerProperty("senderPort");
         this.receiverPort = getIntegerProperty("receiverPort");
         this.fleetId = getStringProperty("fleetId");
+        this.paarbitDuration_s = getIntegerProperty("paarbitDuration");
     }
 
     // Kategorie unter Menübaum
@@ -106,14 +110,14 @@ public class zFTS1 extends Entity {
                                                // korrekte Reihenfolge
         this.FTFOrderpast = new LinkedHashMap<>(); // neue Map zur Archivierung
         for (Entity entity : core.getEntities()) {
-            if (entity instanceof zFTS_Entity1) { 
+            if (entity instanceof zFTS_Entity1) {
                 zFTS_Entity1 FTF = (zFTS_Entity1) entity;
                 if (FTF.getFleetId().equals(fleetId)) {
                     this.FTSR.put(FTF.getId(), FTF);
                 }
             }
             if (entity instanceof zFTS_Waypoint) {
-                zFTS_Waypoint waypoint = (zFTS_Waypoint) entity; 
+                zFTS_Waypoint waypoint = (zFTS_Waypoint) entity;
                 if (waypoint.getWaypointCode() != 0) {
                     if (waypoint.getFleetId().equals(fleetId)) {
                         this.waypoints.put(waypoint.getWaypointCode(), waypoint);
@@ -124,7 +128,7 @@ public class zFTS1 extends Entity {
                 connector = (ZFTS_Connector) entity;
             }
         }
-        this.orders = new ArrayList<>(); 
+        this.orders = new ArrayList<>();
         core.addNotifier(this);
     }
 
@@ -154,7 +158,6 @@ public class zFTS1 extends Entity {
         return Integer.toString(senderId);
     }
 
-
     // Aufgerufen wenn ein Telegramm an Entität übergeben wird cn1 -> eigener
     // Connector wird Controller Telegramm weiterleiten (bzw. FTS nach oben)
     @Override
@@ -181,7 +184,8 @@ public class zFTS1 extends Entity {
 
     }
 
-    // wird normalerweise über input oder output Entity aufgerufen, hier zusätzlich manuell
+    // wird normalerweise über input oder output Entity aufgerufen, hier zusätzlich
+    // manuell
     @Override
     public void onTrigger(Entity entity) {
         super.onTrigger(entity);
@@ -190,7 +194,7 @@ public class zFTS1 extends Entity {
             try {
                 Entry<zFTS_Entity1, zTG1> firstEntry = this.FTFOrder.entrySet().iterator().next();
                 zFTS_Entity1 firstKey = firstEntry.getKey(); // FTF
-                zTG1 firstValue = firstEntry.getValue(); 
+                zTG1 firstValue = firstEntry.getValue();
                 System.out.println("Der erste Schlüssel ist: " + firstKey + ", sein Wert ist: " + firstValue);
                 //
                 this.FTFOrder.remove(firstKey); // löschen des extrahierten Eintrges um nächsten zu nehmen
@@ -217,7 +221,7 @@ public class zFTS1 extends Entity {
 
                 }
             } catch (NullPointerException e) {
-                // Hier  Behandlung für eine NullPointerException einfügen
+                // Hier Behandlung für eine NullPointerException einfügen
                 core.logError(this,
                         "NullPointerException beim Zugriff auf den ersten Eintrag der FTFOrder-Map: " + e.getMessage());
                 FTFOrder.clear();
@@ -233,8 +237,7 @@ public class zFTS1 extends Entity {
 
     }
 
-
-    // Standard senden an Connector, aufrufen aus FTF heraus 
+    // Standard senden an Connector, aufrufen aus FTF heraus
 
     public void sendTelegram(zTG1 telegram, Entity sender) {
         if (connector != null && telegram != null) {
@@ -266,14 +269,14 @@ public class zFTS1 extends Entity {
             return;
         }
         onTrigger(this);
-        ; 
+        ;
 
     }
 
     public void handleWTSK(zTG1_WTSK TWtsk) {
 
         // Paarbitabfrage vor POSO, weil Bezug auf POSO bei Paarbit WTsk nicht vorhanden
-        if (TWtsk.Paarbit.equals("X")) { // cn1 unsicher welches Zeichen Paarbit kennzeichnet
+        if (TWtsk.Paarbit.equals("X") && paarbitDuration_s > 0) { // cn1 unsicher welches Zeichen Paarbit kennzeichnet
 
             this.handlePaarbit(TWtsk);
             return;
@@ -296,7 +299,7 @@ public class zFTS1 extends Entity {
                         core.logError(this, "passender POSO zu WTSK gefunden ");
                         FTFOrder.put(FTF, TWtsk); // FTFOrder befüllen für onTrigger Methode
                         onTrigger(this);
-                        return; 
+                        return;
 
                     }
                 }
@@ -326,11 +329,12 @@ public class zFTS1 extends Entity {
     public void handlePaarbit(zTG1_WTSK tWtsk) {
         Entity Paarbit = core.getEntityById(tWtsk.Quelle);
         paarbitWtsk.put(tWtsk, Paarbit); // Hinzufügen zur Liste
-        zPaarbit pbEvent = new zPaarbit(core.now() + 300000, this, tWtsk); // cn1 Einbau Paarbit Parameter
+        zPaarbit pbEvent = new zPaarbit(core.now() + this.paarbitDuration_s * 1000, this, tWtsk); // cn1 Einbau Paarbit
+                                                                                                  // Parameter
         core.addEvent(pbEvent);
     }
 
-    public zFTS_Entity1 getFreeFTFInit(int waypoint) { 
+    public zFTS_Entity1 getFreeFTFInit(int waypoint) {
 
         if (waypoint != 0) {
             Collection<zFTS_Entity1> all = FTSR.values();
