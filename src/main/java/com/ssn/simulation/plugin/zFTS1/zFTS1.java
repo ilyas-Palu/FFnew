@@ -34,6 +34,7 @@ public class zFTS1 extends Entity {
     protected int receiverPort;
     protected String fleetId;
     protected boolean ignoreHuId;
+    protected int paarbitDuration_s;
 
     protected int FTFControllerID;
     @JsonIgnore
@@ -43,7 +44,7 @@ public class zFTS1 extends Entity {
     @JsonIgnore
     protected transient Map<zFTS_Entity1, zTG1> FTFOrder;
     @JsonIgnore
-    public transient Map<Entity, zTG1_WTSK> paarbitWtsk; // paarbit Map
+    public transient Map<zTG1_WTSK, Entity> paarbitWtsk; // paarbit Map
     @JsonIgnore
     protected transient Map<zTG1, zFTS_Entity1> FTFOrderpast; // Archivierung vergangener Orders
     @JsonIgnore
@@ -77,6 +78,7 @@ public class zFTS1 extends Entity {
         setIntegerProperty("receiverPort", receiverPort, 0, "FTF Controller");
         setStringProperty("fleetId", fleetId, "FTF Controller");
         setBooleanProperty("ignoreHuId", ignoreHuId, "FTF Controller");
+        setIntegerProperty("paarbitDuration", paarbitDuration_s, "FTF Controller");
 
     }
 
@@ -90,6 +92,7 @@ public class zFTS1 extends Entity {
         this.receiverPort = getIntegerProperty("receiverPort");
         this.fleetId = getStringProperty("fleetId");
         this.ignoreHuId = getBooleanProperty("ignoreHuId");
+        this.paarbitDuration_s = getIntegerProperty("paarbitDuration");
     }
 
     // Kategorie unter Menübaum
@@ -277,6 +280,14 @@ public class zFTS1 extends Entity {
 
     public void handleWTSK(zTG1_WTSK TWtsk) {
 
+                // Paarbitabfrage vor POSO, weil Bezug auf POSO bei Paarbit WTsk nicht vorhanden
+                if (TWtsk.Paarbit.equals("X") && paarbitDuration_s > 0) { // cn1 unsicher welches Zeichen Paarbit kennzeichnet
+
+                    this.handlePaarbit(TWtsk);
+                    return;
+        
+                }
+
         // Iteration über die Einträge der Map
         // Abfrage ob Quellplatz und HU_Nummer bereits vorhanden in Archiv
         for (Map.Entry<zTG1, zFTS_Entity1> entry : FTFOrderpast.entrySet()) {
@@ -284,12 +295,6 @@ public class zFTS1 extends Entity {
                 zFTS_Entity1 ftfkey = entry.getValue();
                 zTG1 TGvalue = entry.getKey();
 
-                if (TWtsk.Paarbit.equals("X")) { // Paarbit, Logik ausgeklammert, da noch nicht fertig
-
-                    // this.handlePaarbit(TWtsk);
-                    // return;
-
-                }
                 // Überprüfen, ob die Werte übereinstimmen
                 if (TGvalue instanceof zTG1_POSO) {
                     zTG1_POSO Tvalue = (zTG1_POSO) TGvalue;
@@ -312,18 +317,26 @@ public class zFTS1 extends Entity {
                 return;
             }
         }
-        zFTS_Entity1 newFTF = getFreeFTFInit(1); // Wenn vorher kein POSO gesendet wurde
-        FTFOrder.put(newFTF, TWtsk);
+        // FreeFTF Auslagerung
+        this.useUnutiliziedFTF(TWtsk);
         onTrigger(this);
 
+    }
+
+    public void useUnutiliziedFTF(zTG1_WTSK TWtsk) {
+
+        zFTS_Entity1 newFTF = getFreeFTFInit(1); // Wenn vorher kein POSO gesendet wurde
+        FTFOrder.put(newFTF, TWtsk);
     }
 
     // Kapazitäts und Zuordnungstests auf FTS bezogene Entitäten :
 
     public void handlePaarbit(zTG1_WTSK tWtsk) {
         Entity Paarbit = core.getEntityById(tWtsk.Quelle);
-        paarbitWtsk.put(Paarbit, tWtsk);
-        checkPaarbit(tWtsk);
+        paarbitWtsk.put(tWtsk, Paarbit); // Hinzufügen zur Liste
+        zPaarbit pbEvent = new zPaarbit(core.now() + this.paarbitDuration_s * 1000, this, tWtsk); // cn1 Einbau Paarbit
+                                                                                                  // Parameter
+        core.addEvent(pbEvent);
     }
 
     public void checkPaarbit(zTG1_WTSK wtsk) {
@@ -360,11 +373,12 @@ public class zFTS1 extends Entity {
 
     public void inspectPaarbit(zTG1_WTSK paarbitTG) {
 
-        for (Map.Entry<Entity, zTG1_WTSK> entry : paarbitWtsk.entrySet()) {
-            if (entry.getValue() == paarbitTG) {
-                paarbitTG.Paarbit = null;
-                handleWTSK(paarbitTG);
-                return;
+        for (Map.Entry<zTG1_WTSK, Entity> entry : paarbitWtsk.entrySet()) {
+            if (entry.getKey() == paarbitTG) {
+                // paarbitTG.Paarbit = null; // um IF Paarbit Abfrage zu umgehen
+                paarbitWtsk.remove(entry.getKey());
+                useUnutiliziedFTF(paarbitTG);
+                onTrigger(this);
             }
 
         }

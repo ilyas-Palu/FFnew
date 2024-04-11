@@ -26,6 +26,8 @@ public class zFTS_Entity1 extends Entity {
     @JsonIgnore
     protected transient Entity destMach; // used
     @JsonIgnore
+    protected transient Boolean paarbitActive;
+    @JsonIgnore
     protected transient Entity srcdest; // used
     @JsonIgnore
     protected transient Entity posoSrc; // used
@@ -107,6 +109,7 @@ public class zFTS_Entity1 extends Entity {
         posoTime = 0;
         wtorder = null;
         posoSrc = null;
+        paarbitActive = false;
         DestinationWay1 = new LinkedHashMap<>(); // neue Map zur Archivierung
         for (Entity entity : core.getEntities()) {
             if (entity instanceof zFTS1) { // Austausch eigene Controller Entität! cn1
@@ -225,8 +228,10 @@ public class zFTS_Entity1 extends Entity {
                                             return;
                                         }
 
-                                        this.wtorder = null;
-                                        poso = null;
+                                        if (!paarbitActive) {
+                                            this.wtorder = null;
+                                            poso = null;
+                                        }
                                     }
                                     this.DestinationWay1.remove(vProcess);
                                     // löschen Eintrag
@@ -447,14 +452,16 @@ public class zFTS_Entity1 extends Entity {
         this.srcdest = core.getEntityById(zwqq); // konkrete Quellentität
         zFTS_Waypoint lastdest1 = allmap(zwst);
         zFTS_Waypoint firstsrc = allmap(zwqq);
-        core.logInfo(this, "Beauftragung wtsk auf Förderer " + lastdest1 + " wegen Ziel " + destMach);
+        String combinedKeyQ = "WTSK-Q" + WTOrder.sequencenumber;
+        String combinedKeyZ = "WTSK-Z" + WTOrder.sequencenumber;
+        core.logInfo(this, "Beauftragung wtsk auf Entität " + lastdest1 + " wegen Ziel " + destMach);
         if (firstsrc != null) {
-            DestinationWay1.put("WTSK-Q", firstsrc); // eigentliche Quelle zuerst
+            DestinationWay1.put(combinedKeyQ, firstsrc); // eigentliche Quelle zuerst
         } else {
             // Fehlerbehandlung
             return;
         }
-        DestinationWay1.put("WTSK-Z", lastdest1); // eigentliches Ziel
+        DestinationWay1.put(combinedKeyZ, lastdest1); // eigentliches Ziel
 
     }
 
@@ -563,18 +570,9 @@ public class zFTS_Entity1 extends Entity {
                 this.wtcoTG(HU);
                 // cn1 wtco Telegramm einbauen
                 if (lastWaypointCode > 50) {
-                    Entity mapped = this.mapPaarbit(destMach);
+                    Entity mapped = this.mapPaarbit(destMach, "A");
                     if (mapped != null) {
-                        for (Map.Entry<Entity, zTG1_WTSK> entry : controller.paarbitWtsk.entrySet()) {
-                            if (entry.getKey() == mapped) {
-                                setWTSKOrder(entry.getValue());
-                                // Für Paarbitlogik:
-                                // handleesrctransfer
-                                // Ziel herausziehen und in Routingtabelle
-                                // wtsk Eintrag korrekt aus Tabelle löschen
-                            }
-
-                        }
+                        this.checkPaarbitMatch(mapped);
                     }
                     this.moveOutMach();
                 }
@@ -593,13 +591,49 @@ public class zFTS_Entity1 extends Entity {
         blockedTransfer = false;
     }
 
-    public Entity mapPaarbit(Entity destMach2) {
-        switch (destMach2.getId()) { // Wenn bestimmte Entitäten dann Abfrage
-            case "Halfauomatic":
-                return destMach2;
+    public Entity mapPaarbit(Entity destMach2, String codeEnding) {// korrektes Mapping cn1
+        // switch (destMach2.getId()) { // Wenn bestimmte Entitäten dann Abfrage
+        String mach_r = destMach2.getId();
 
+        String[] parts = mach_r.split("-");
+
+        if (parts.length != 3) {
+            return null;
+        }
+
+        // Kürzel und Endnummer abändern
+
+        parts[2] = codeEnding; // Parameter Einbau evtl
+
+        String combinedString = String.join("-", parts);
+
+        try {
+            Entity assignedVG = core.getEntityById(combinedString);
+            return assignedVG;
+        } catch (Exception e) {
+            core.logInfo(this, "No matching " + codeEnding + " Conveyor found for " + destMach2.getId());
         }
         return null;
+
+    }
+
+    public void checkPaarbitMatch(Entity mapped) {
+
+        for (Map.Entry<zTG1_WTSK, Entity> entry : controller.paarbitWtsk.entrySet()) {
+            if (entry.getValue() == mapped) { // richtiger Eintrag gefunden
+                if (mapped.hasItem()) {
+                    this.paarbitActive = true;
+                    setWTSKOrder(entry.getKey());
+                } else {
+                    core.logError(this, "Paarbit Source Conveyor does not have HU stored, WTSK "
+                            + entry.getValue()
+                            + " will tried to be executed again (regularly) after Expiration of Paarbit checktime");
+                }
+                controller.paarbitWtsk.remove(entry.getKey());
+
+            }
+
+        }
     }
 
     public void infoTG(Item HU, String MFSError) {
@@ -676,6 +710,11 @@ public class zFTS_Entity1 extends Entity {
             conf.HU_Höhe = wtorder.HU_Höhe; // unsicher ob Info auch aus Antsim entnehmbar
             conf.Paarbit = wtorder.Paarbit;
             conf.Paarbit = wtorder.Prioritätsbit;
+
+            if (conf.Paarbit.equals("X")) {
+                this.paarbitActive = false;
+            }
+
             conf.MFS_Error = "";
             conf.Reserve = "";
             conf.Endekennzeichen = zTG1.TELEGRAM_DELIMITER_ENDING;
