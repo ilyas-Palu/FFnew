@@ -194,7 +194,8 @@ public class zFTS_Entity1 extends Entity {
                             if (vProcess.contains("WTSK")) {
                                 if (from == zwp) { // lastdest erreicht (bzw. Quellplatz)
                                     if (vProcess.contains("Q")) {
-                                        if (lastWaypointCode > 50) {// ->im Produktionsnetz
+                                        if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {// ->im
+                                                                                                                // Produktionsnetz
                                             this.moveproddestx(vProcess, false);
                                             if (!isMoving()) {
                                                 this.moveproddesty(vProcess, false);
@@ -213,7 +214,7 @@ public class zFTS_Entity1 extends Entity {
                                         }
 
                                     } else {
-                                        if (lastWaypointCode > 50) {
+                                        if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
                                             this.moveproddestx(vProcess, false);
                                             if (!isMoving()) {
                                                 this.moveproddesty(vProcess, false);
@@ -247,7 +248,7 @@ public class zFTS_Entity1 extends Entity {
                                             return;
                                         }
                                     } else {
-                                        if (lastWaypointCode > 50) {
+                                        if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
                                             if (!isMoving()) {
 
                                                 if (from.nextWaypoint(zwp.getWaypointCode()) != null) {
@@ -530,7 +531,7 @@ public class zFTS_Entity1 extends Entity {
                     // Prüfung
                     srcdest.moveItem(this, HU, 0);
                     this.infoTG(HU, null);
-                    if (lastWaypointCode > 50) {
+                    if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
                         this.moveOutMach();
                     }
                     blockedTransfer = false;
@@ -538,7 +539,7 @@ public class zFTS_Entity1 extends Entity {
                 } else {
                     this.handleMMHU();
                 }
-            } else if (lastWaypointCode > 50) {
+            } else if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
                 if (core.now() < timeEnd) {
                     zInfo_MTRE checkMtre = new zInfo_MTRE(core.now() + 1000);
                     checkMtre.setConveyor(srcdest);
@@ -569,7 +570,7 @@ public class zFTS_Entity1 extends Entity {
                 this.moveItem(destMach, HU, 0);
                 this.wtcoTG(HU);
                 // cn1 wtco Telegramm einbauen
-                if (lastWaypointCode > 50) {
+                if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
                     Entity mapped = this.mapPaarbit(destMach, "A");
                     if (mapped != null) {
                         this.checkPaarbitMatch(mapped);
@@ -627,7 +628,7 @@ public class zFTS_Entity1 extends Entity {
                 } else {
                     core.logError(this, "Paarbit Source Conveyor does not have HU stored, WTSK "
                             + entry.getValue()
-                            + " will tried to be executed again (regularly) after Expiration of Paarbit checktime");
+                            + " will tried to be executed again (regularly) after expiration of Paarbit checktime");
                 }
                 controller.paarbitWtsk.remove(entry.getKey());
 

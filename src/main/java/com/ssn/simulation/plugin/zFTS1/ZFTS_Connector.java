@@ -322,7 +322,7 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
         if (str != null && str.length() < 9 && str.length() > 0) {
             return str;
         } else {
-            core.logInfo(this, "No usable SenderId in Controller Field, default value TOMPROD will be used instead");
+            core.logInfo(this, "No usable SenderId in Controller Field, default value FTS-001 will be used instead");
             return zTG1.TELEGRAM_DELIMITER_HEADER_KTECH; // Default Übergabe bei Fehler
         }
 

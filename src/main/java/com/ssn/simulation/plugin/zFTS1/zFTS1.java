@@ -21,6 +21,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import com.ssn.simulation.core.Entity;
 import com.ssn.simulation.telegrams.Telegram;
+//import com.ssn.simulation.editor.IntegerListProperty;
 
 /**
  * Controller Entity for FTS zImplementation
@@ -35,6 +36,9 @@ public class zFTS1 extends Entity {
     protected String fleetId;
     protected boolean ignoreHuId;
     protected int paarbitDuration_s;
+    protected List<Integer> relevantWpcode_ProductionArea; // muss noch für KTECH eingebunden werden mitsamt
+                                                           // Logikänderung in FTF
+    protected int minWpcode_ProductionArea;
 
     protected int FTFControllerID;
     @JsonIgnore
@@ -66,6 +70,8 @@ public class zFTS1 extends Entity {
         this.fleetId = "121212";
         this.senderId = 321;
         this.ignoreHuId = false;
+        this.minWpcode_ProductionArea = 51;
+        relevantWpcode_ProductionArea = new ArrayList<>();
     }
 
     // bei Bearbeitung der Attribute
@@ -79,6 +85,9 @@ public class zFTS1 extends Entity {
         setStringProperty("fleetId", fleetId, "FTF Controller");
         setBooleanProperty("ignoreHuId", ignoreHuId, "FTF Controller");
         setIntegerProperty("paarbitDuration", paarbitDuration_s, "FTF Controller");
+        // setListProperty("relevantWpcode_ProductionArea",
+        // relevantWpcode_ProductionArea, "FTF Controller", new IntegerListProperty());
+        setIntegerProperty("minWpcode_ProductionArea", minWpcode_ProductionArea, "FTF Controller");
 
     }
 
@@ -93,6 +102,9 @@ public class zFTS1 extends Entity {
         this.fleetId = getStringProperty("fleetId");
         this.ignoreHuId = getBooleanProperty("ignoreHuId");
         this.paarbitDuration_s = getIntegerProperty("paarbitDuration");
+        // this.relevantWpcode_ProductionArea =
+        // getListProperty("relevantWpcode_ProductionArea", Integer.class);
+        this.minWpcode_ProductionArea = getIntegerProperty("minWpcode_ProductionArea");
     }
 
     // Kategorie unter Menübaum
@@ -280,13 +292,13 @@ public class zFTS1 extends Entity {
 
     public void handleWTSK(zTG1_WTSK TWtsk) {
 
-                // Paarbitabfrage vor POSO, weil Bezug auf POSO bei Paarbit WTsk nicht vorhanden
-                if (TWtsk.Paarbit.equals("X") && paarbitDuration_s > 0) { // cn1 unsicher welches Zeichen Paarbit kennzeichnet
+        // Paarbitabfrage vor POSO, weil Bezug auf POSO bei Paarbit WTsk nicht vorhanden
+        if (TWtsk.Paarbit.equals("X") && paarbitDuration_s > 0) { // cn1 unsicher welches Zeichen Paarbit kennzeichnet
 
-                    this.handlePaarbit(TWtsk);
-                    return;
-        
-                }
+            this.handlePaarbit(TWtsk);
+            return;
+
+        }
 
         // Iteration über die Einträge der Map
         // Abfrage ob Quellplatz und HU_Nummer bereits vorhanden in Archiv
@@ -337,10 +349,8 @@ public class zFTS1 extends Entity {
         zPaarbit pbEvent = new zPaarbit(core.now() + this.paarbitDuration_s * 1000, this, tWtsk); // cn1 Einbau Paarbit
                                                                                                   // Parameter
         core.addEvent(pbEvent);
-    }
-
-    public void checkPaarbit(zTG1_WTSK wtsk) {
-        zPaarbit pbEvent = new zPaarbit(core.now() + 300000, this, wtsk);
+        core.logInfo(this, "Pdaarbit Event added, WTSK will be seperately executed if no matching FTF/WTSK within "
+                + paarbitDuration_s + " seconds");
     }
 
     public zFTS_Entity1 getFreeFTFInit(int waypoint) {
@@ -388,5 +398,11 @@ public class zFTS1 extends Entity {
         return ignoreHuId;
     }
 
+    public int getMinWpcode_ProductionArea() {
+        return minWpcode_ProductionArea;
+    }
 
+    public List<Integer> getRelevantWpcode_ProductionArea() {
+        return relevantWpcode_ProductionArea;
+    }
 }
