@@ -21,6 +21,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import com.ssn.simulation.core.Entity;
 import com.ssn.simulation.telegrams.Telegram;
+import com.ssn.simulation.editor.IntegerListProperty;
 
 /**
  * Controller Entity for FTS zImplementation
@@ -34,7 +35,11 @@ public class zFTS1 extends Entity {
     protected int receiverPort;
     protected String fleetId;
     protected int FTFControllerID;
+    protected boolean ignoreHuId;
     protected int paarbitDuration_s;
+    protected List<Integer> relevantWpcode_ProductionArea;
+    protected int minWpcode_ProductionArea;
+
     @JsonIgnore
     protected transient Map<String, zFTS_Entity1> FTSR; // FTS Klasse
     @JsonIgnore
@@ -62,8 +67,11 @@ public class zFTS1 extends Entity {
         this.senderPort = 0;
         this.receiverPort = 0;
         this.fleetId = "121212";
+        this.ignoreHuId = false;
         this.senderId = 321;
         this.paarbitDuration_s = 300;
+        this.minWpcode_ProductionArea = 51;
+        relevantWpcode_ProductionArea = new ArrayList<>();
     }
 
     // bei Bearbeitung der Attribute
@@ -75,7 +83,12 @@ public class zFTS1 extends Entity {
         setIntegerProperty("senderPort", senderPort, 0, "FTF Controller");
         setIntegerProperty("receiverPort", receiverPort, 0, "FTF Controller");
         setStringProperty("fleetId", fleetId, "FTF Controller");
+        setBooleanProperty("ignoreHuId", ignoreHuId, "FTF Controller");
         setIntegerProperty("paarbitDuration", paarbitDuration_s, "FTF Controller");
+        setListProperty("relevantWpcode_ProductionArea",
+                relevantWpcode_ProductionArea, "FTF Controller", new IntegerListProperty());
+        setIntegerProperty("minWpcode_ProductionArea", minWpcode_ProductionArea, "FTF Controller");
+
     }
 
     // bei Bearbeitung der Eigenschaften
@@ -87,7 +100,10 @@ public class zFTS1 extends Entity {
         this.senderPort = getIntegerProperty("senderPort");
         this.receiverPort = getIntegerProperty("receiverPort");
         this.fleetId = getStringProperty("fleetId");
+        this.ignoreHuId = getBooleanProperty("ignoreHuId");
         this.paarbitDuration_s = getIntegerProperty("paarbitDuration");
+        this.relevantWpcode_ProductionArea = getListProperty("relevantWpcode_ProductionArea", Integer.class);
+        this.minWpcode_ProductionArea = getIntegerProperty("minWpcode_ProductionArea");
     }
 
     // Kategorie unter Menübaum
@@ -196,7 +212,6 @@ public class zFTS1 extends Entity {
                 zFTS_Entity1 firstKey = firstEntry.getKey(); // FTF
                 zTG1 firstValue = firstEntry.getValue();
                 System.out.println("Der erste Schlüssel ist: " + firstKey + ", sein Wert ist: " + firstValue);
-                //
                 this.FTFOrder.remove(firstKey); // löschen des extrahierten Eintrges um nächsten zu nehmen
                 if (firstValue instanceof zTG1_POSO) {
                     this.FTFOrderpast.put(firstValue, firstKey); // Archivierung
@@ -332,6 +347,8 @@ public class zFTS1 extends Entity {
         zPaarbit pbEvent = new zPaarbit(core.now() + this.paarbitDuration_s * 1000, this, tWtsk); // cn1 Einbau Paarbit
                                                                                                   // Parameter
         core.addEvent(pbEvent);
+        core.logInfo(this, "Paarbit Event added, WTSK will be seperately executed if no matching FTF/WTSK within "
+                + paarbitDuration_s + " seconds");
     }
 
     public zFTS_Entity1 getFreeFTFInit(int waypoint) {
@@ -373,5 +390,17 @@ public class zFTS1 extends Entity {
             }
 
         }
+    }
+
+    public int getMinWpcode_ProductionArea() {
+        return minWpcode_ProductionArea;
+    }
+
+    public List<Integer> getRelevantWpcode_ProductionArea() {
+        return relevantWpcode_ProductionArea;
+    }
+
+    public boolean isIgnoreHuId() {
+        return ignoreHuId;
     }
 }

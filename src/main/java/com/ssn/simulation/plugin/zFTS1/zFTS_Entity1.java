@@ -194,7 +194,8 @@ public class zFTS_Entity1 extends Entity {
                             if (vProcess.contains("WTSK")) {
                                 if (from == zwp) { // lastdest erreicht (bzw. Quellplatz)
                                     if (vProcess.contains("Q")) {
-                                        if (lastWaypointCode > 50) {// ->im Produktionsnetz
+                                        if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {// ->im
+                                            // Produktionsnetz
                                             this.moveproddestx(vProcess, false);
                                             if (!isMoving()) {
                                                 this.moveproddesty(vProcess, false);
@@ -213,7 +214,7 @@ public class zFTS_Entity1 extends Entity {
                                         }
 
                                     } else {
-                                        if (lastWaypointCode > 50) {
+                                        if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
                                             this.moveproddestx(vProcess, false);
                                             if (!isMoving()) {
                                                 this.moveproddesty(vProcess, false);
@@ -250,7 +251,7 @@ public class zFTS_Entity1 extends Entity {
                                             return;
                                         }
                                     } else {
-                                        if (lastWaypointCode > 50) {
+                                        if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
                                             if (!isMoving()) {
                                                 moveFTF(from);
                                                 return;
@@ -471,8 +472,11 @@ public class zFTS_Entity1 extends Entity {
 
             // Durch Waypoints iterieren Koordinaten speichern und nähsten Zurückgeben
             comp1 = (float) zDest.distanceTo(element);
-            if (element.getWaypointCode() == 61 || element.getWaypointCode() == 64 || element.getWaypointCode() == 67
-                    || element.getWaypointCode() == 70 || element.getWaypointCode() == 73) {
+            // if (element.getWaypointCode() == 61 || element.getWaypointCode() == 64 ||
+            // lement.getWaypointCode() == 67
+            // || element.getWaypointCode() == 70 || element.getWaypointCode() == 73) {
+
+            if (this.controller.getRelevantWpcode_ProductionArea().contains(element.getWaypointCode())) {
                 if (comp1 < dist1) {
                     dist1 = comp1;
                     mindist = element;
@@ -498,10 +502,11 @@ public class zFTS_Entity1 extends Entity {
             core.logInfo(this, " jetzt Durchführung der HU Aufnahmelogik ");
             if (srcdest.hasItem()) {
                 Item HU = srcdest.getFirstItem();
-                if (HU.getId().equals(wtorder.HU_Nummer)) { // cn1 korrekte HU ID Prüfung
+                if (HU.getId().equals(wtorder.HU_Nummer) || this.controller.isIgnoreHuId()) { // cn1 korrekte HU ID
+                                                                                              // Prüfung
                     srcdest.moveItem(this, HU, 0);
                     this.infoTG(HU, null);
-                    if (lastWaypointCode > 50) {
+                    if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
                         this.moveOutMach();
                     }
                     blockedTransfer = false;
@@ -509,7 +514,7 @@ public class zFTS_Entity1 extends Entity {
                 } else {
                     this.handleMMHU();
                 }
-            } else if (lastWaypointCode > 50) {
+            } else if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
                 if (core.now() < timeEnd) {
                     zInfo_MTRE checkMtre = new zInfo_MTRE(core.now() + 1000);
                     checkMtre.setConveyor(srcdest);
@@ -540,13 +545,13 @@ public class zFTS_Entity1 extends Entity {
                 this.moveItem(destMach, HU, 0);
                 this.wtcoTG(HU);
                 // cn1 wtco Telegramm einbauen
-                if (lastWaypointCode > 50) {
-                    Entity mapped = this.mapPaarbit(destMach, 2);
+                if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
+                    Entity mapped = this.mapPaarbit(destMach, "VG", "02");
                     if (mapped != null) {
                         this.checkPaarbitMatch(mapped);
                     }
                     if (!paarbitActive) {
-                        mapped = this.mapPaarbit(destMach, 4);
+                        mapped = this.mapPaarbit(destMach, "VG", "04");
                         if (mapped != null) {
                             this.checkPaarbitMatch(mapped);
                         }
@@ -570,7 +575,7 @@ public class zFTS_Entity1 extends Entity {
         blockedTransfer = false;
     }
 
-    public Entity mapPaarbit(Entity destMach2, int codeNumber) {// korrektes Mapping cn1
+    public Entity mapPaarbit(Entity destMach2, String codeEnding1, String codeEnding2) {// korrektes Mapping cn1
         // switch (destMach2.getId()) { // Wenn bestimmte Entitäten dann Abfrage
         String mach_r = destMach2.getId();
 
@@ -582,8 +587,8 @@ public class zFTS_Entity1 extends Entity {
 
         // Kürzel und Endnummer abändern
 
-        parts[2] = "VG"; // Parameter Einbau evtl
-        parts[3] = 0 + String.valueOf(codeNumber); // Parameter Einbau evtl
+        parts[2] = codeEnding1; // Parameter Einbau evtl
+        parts[3] = codeEnding2; // Parameter Einbau evtl
 
         String combinedString = String.join("-", parts);
 
@@ -591,7 +596,8 @@ public class zFTS_Entity1 extends Entity {
             Entity assignedVG = core.getEntityById(combinedString);
             return assignedVG;
         } catch (Exception e) {
-            core.logInfo(this, "No matching VG-0" + codeNumber + " Conveyor found for " + destMach2.getId());
+            core.logInfo(this,
+                    "No matching " + codeEnding1 + "-" + codeEnding2 + " Conveyor found for " + destMach2.getId());
         }
         return null;
 
@@ -627,7 +633,12 @@ public class zFTS_Entity1 extends Entity {
             } else {
                 info.Quelle = destMach.getId();
                 info.CP = destMach.getId(); // Nachfragen
-                info.HU_Nummer = HU.getId();
+                if (!this.controller.isIgnoreHuId()) {
+                    info.HU_Nummer = HU.getId();
+                } else {
+                    info.HU_Nummer = this.wtorder.HU_Nummer;
+                    core.logInfo(this, "For INFO telegram, HU Number of WTSK was used, since ignoreHuId is activated");
+                }
                 info.MFS_Error = "";
                 info.Reserve = "...";
             }
@@ -644,7 +655,12 @@ public class zFTS_Entity1 extends Entity {
             zTG1_WTCO conf = zTG1_WTCO.getHeaderData();
             conf.Quelle = this.srcdest.getId();
             conf.Ziel = this.destMach.getId();
-            conf.HU_Nummer = HU.getId();
+            if (!this.controller.isIgnoreHuId()) {
+                conf.HU_Nummer = HU.getId();
+            } else {
+                conf.HU_Nummer = this.wtorder.HU_Nummer;
+                core.logInfo(this, "For WTCO telegram, HU Number of WTSK was used, since ignoreHuId is activated");
+            }
             conf.HU_Höhe = wtorder.HU_Höhe; // unsicher ob Info auch aus Antsim entnehmbar
             conf.Paarbit = wtorder.Paarbit;
             conf.Paarbit = wtorder.Prioritätsbit;

@@ -29,6 +29,8 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
     @AntSimSocConfig
     protected int controllerPort;
 
+    protected String fts_Sender_Id;
+
     @JsonIgnore
     protected volatile transient LinkedBlockingQueue<zTG1> telegrams;
     @JsonIgnore
@@ -84,12 +86,14 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
         super.onAttributesChanged();
         setStringProperty("controllerIp", controllerIp, "Connector");
         setIntegerProperty("controlerPort", controllerPort, "Connector");
+        setStringProperty("FTS_Sender_ID", fts_Sender_Id, "Connector");
     }
 
     @Override
     public void onPropertiesChanged() {
         this.controllerIp = getStringProperty("controllerIp");
         this.controllerPort = getIntegerProperty("controlerPort");
+        this.fts_Sender_Id = getStringProperty("FTS_Sender_ID");
         super.onPropertiesChanged();
     }
 
@@ -213,7 +217,7 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
 
     public synchronized void sendTelegram(zTG1 telegram) {
         try {
-            telegram.setSender(zTG1.TELEGRAM_DELIMITER_HEADER2);
+            telegram.setSender(this.checkSenderId(this.fts_Sender_Id)); // Ktech Auslagerung variabler sender);
             telegram.setReceiver(zTG1.TELEGRAM_DELIMITER_HEADER1); // unsicher cn1
             if (sqn == 9999) {
                 sqn = 1;
@@ -309,4 +313,19 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
         return true;
 
     }
+
+    public String getFts_Sender_Id() {
+        return fts_Sender_Id;
+    }
+
+    public String checkSenderId(String str) {
+        if (str != null && str.length() < 9 && str.length() > 0) {
+            return str;
+        } else {
+            core.logInfo(this, "No usable SenderId in Controller Field, default value TOMPROD will be used instead");
+            return zTG1.TELEGRAM_DELIMITER_HEADER2; // Default Übergabe bei Fehler
+        }
+
+    }
+
 }
