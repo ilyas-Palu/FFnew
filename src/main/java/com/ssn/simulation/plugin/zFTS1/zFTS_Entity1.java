@@ -514,21 +514,22 @@ public class zFTS_Entity1 extends Entity {
                 } else {
                     this.handleMMHU();
                 }
-            } else if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
-                if (core.now() < timeEnd) {
-                    zInfo_MTRE checkMtre = new zInfo_MTRE(core.now() + 1000);
-                    checkMtre.setConveyor(srcdest);
-                    checkMtre.setEndTime(timeEnd);
-                    checkMtre.setFTF(this);
-                    checkMtre.setProcess(process);
-                    core.addEvent(checkMtre);
+            } else // if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
+                   // //gelöscht MTRE unabhängig von WPCode
+            if (core.now() < timeEnd) {
+                zInfo_MTRE checkMtre = new zInfo_MTRE(core.now() + 1000);
+                checkMtre.setConveyor(srcdest);
+                checkMtre.setEndTime(timeEnd);
+                checkMtre.setFTF(this);
+                checkMtre.setProcess(process);
+                core.addEvent(checkMtre);
 
-                    return;
-                } else {
-                    this.handleMTRE();
+                return;
+            } else {
+                this.handleMTRE();
 
-                }
             }
+            // }
         }
 
         blockedTransfer = false;
@@ -611,8 +612,8 @@ public class zFTS_Entity1 extends Entity {
                 switch (MFSError) {
                     case "MMHU": // Falsche HU Nummer
                         info.HU_Nummer = wtorder.HU_Nummer;
-                        info.Quelle = destMach.getId();
-                        info.CP = destMach.getId();
+                        info.Quelle = srcdest.getId();
+                        info.CP = srcdest.getId();
                         break;
                     case "MPOE": // Zeit abgelaufen nach POSO
                         info.HU_Nummer = poso.HU_Nummer;
@@ -621,8 +622,8 @@ public class zFTS_Entity1 extends Entity {
                         break;
                     case "MTRE": // nach kurzer Zeit trotz wtsk kein item auf Förderer
                         info.HU_Nummer = wtorder.HU_Nummer;
-                        info.Quelle = destMach.getId();
-                        info.CP = destMach.getId();
+                        info.Quelle = srcdest.getId();
+                        info.CP = srcdest.getId();
                         break;
 
                 }
