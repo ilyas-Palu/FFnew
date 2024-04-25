@@ -349,7 +349,7 @@ public class zFTS1 extends Entity {
         zPaarbit pbEvent = new zPaarbit(core.now() + this.paarbitDuration_s * 1000, this, tWtsk); // cn1 Einbau Paarbit
                                                                                                   // Parameter
         core.addEvent(pbEvent);
-        core.logInfo(this, "Pdaarbit Event added, WTSK will be seperately executed if no matching FTF/WTSK within "
+        core.logInfo(this, "Paarbit Event added, WTSK will be seperately executed if no matching FTF/WTSK within "
                 + paarbitDuration_s + " seconds");
     }
 

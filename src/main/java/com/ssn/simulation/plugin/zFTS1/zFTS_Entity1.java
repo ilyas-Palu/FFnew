@@ -539,21 +539,22 @@ public class zFTS_Entity1 extends Entity {
                 } else {
                     this.handleMMHU();
                 }
-            } else if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
-                if (core.now() < timeEnd) {
-                    zInfo_MTRE checkMtre = new zInfo_MTRE(core.now() + 1000);
-                    checkMtre.setConveyor(srcdest);
-                    checkMtre.setEndTime(timeEnd);
-                    checkMtre.setFTF(this);
-                    checkMtre.setProcess(process);
-                    core.addEvent(checkMtre);
+            } else // if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
+                   // //extra WPCode Abfrage gelöscht
+            if (core.now() < timeEnd) {
+                zInfo_MTRE checkMtre = new zInfo_MTRE(core.now() + 1000);
+                checkMtre.setConveyor(srcdest);
+                checkMtre.setEndTime(timeEnd);
+                checkMtre.setFTF(this);
+                checkMtre.setProcess(process);
+                core.addEvent(checkMtre);
 
-                    return;
-                } else {
-                    this.handleMTRE();
+                return;
+            } else {
+                this.handleMTRE();
 
-                }
             }
+            // }
         }
 
         blockedTransfer = false;
@@ -580,6 +581,9 @@ public class zFTS_Entity1 extends Entity {
                     }
                 } else {
                     // Logik für MTRO - (occupied)
+                    core.logInfo(this, "MTRO telegram will be send, since destination conveyor " + destMach.getId()
+                            + " already has HU " + destMach.getFirstItem().getId() + " stored, therefore HU "
+                            + this.getFirstItem().getId() + " will be deleted");
                     handleMTRO();
                 }
             } else if (core.now() < timeEnd) {
