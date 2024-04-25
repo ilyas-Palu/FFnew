@@ -655,7 +655,7 @@ public class zFTS_Entity1 extends Entity {
                 switch (MFSError) {
                     case "MMHU": // Falsche HU Nummer
                         info.HU_Nummer = wtorder.HU_Nummer;
-                        info.Quelle = destMach.getId();
+                        info.Quelle = srcdest.getId();
                         info.CP = srcdest.getId();
                         break;
                     case "MPOE": // Zeit abgelaufen nach POSO
@@ -665,7 +665,7 @@ public class zFTS_Entity1 extends Entity {
                         break;
                     case "MTRE": // nach kurzer Zeit trotz wtsk kein item auf Förderer
                         info.HU_Nummer = wtorder.HU_Nummer;
-                        info.Quelle = destMach.getId();
+                        info.Quelle = srcdest.getId();
                         info.CP = srcdest.getId(); // Änderung auf src
                         break;
                     case "MTRO": // Neu Zielförderer hat bereits HU
