@@ -338,7 +338,15 @@ public class zFTS1 extends Entity {
     public void useUnutiliziedFTF(zTG1_WTSK TWtsk) {
 
         zFTS_Entity1 newFTF = getFreeFTFInit(1); // Wenn vorher kein POSO gesendet wurde
-        FTFOrder.put(newFTF, TWtsk);
+        if (newFTF != null) {
+            FTFOrder.put(newFTF, TWtsk);
+        } else {
+            core.logError(this, "No Free FTF could be found WTSK " + TWtsk + " currently can not be assigned to a FTF");
+            // Event Erstellung
+            zDelay dEvent = new zDelay(core.now() + 10000, this, TWtsk); // Einbau Parameter statt 10000
+            core.addEvent(dEvent); 
+
+        }
     }
 
     public void handlePaarbit(zTG1_WTSK tWtsk) {
