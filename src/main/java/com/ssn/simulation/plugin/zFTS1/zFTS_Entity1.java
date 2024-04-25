@@ -566,16 +566,21 @@ public class zFTS_Entity1 extends Entity {
         if (this.destMach != null) {
             core.logInfo(this, " jetzt Durchführung der HU Abgabelogik ");
             if (this.hasItem()) {
-                Item HU = this.getFirstItem();
-                this.moveItem(destMach, HU, 0);
-                this.wtcoTG(HU);
-                // cn1 wtco Telegramm einbauen
-                if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
-                    Entity mapped = this.mapPaarbit(destMach, "A");
-                    if (mapped != null) {
-                        this.checkPaarbitMatch(mapped);
+                if (!destMach.hasItem()) {
+                    Item HU = this.getFirstItem();
+                    this.moveItem(destMach, HU, 0);
+                    this.wtcoTG(HU);
+                    // cn1 wtco Telegramm einbauen
+                    if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
+                        Entity mapped = this.mapPaarbit(destMach, "A");
+                        if (mapped != null) {
+                            this.checkPaarbitMatch(mapped);
+                        }
+                        this.moveOutMach();
                     }
-                    this.moveOutMach();
+                } else {
+                    // Logik für MTRO - (occupied)
+                    handleMTRO();
                 }
             } else if (core.now() < timeEnd) {
                 zTransfer destEvent = new zTransfer(core.now() + 0);
@@ -657,9 +662,13 @@ public class zFTS_Entity1 extends Entity {
                     case "MTRE": // nach kurzer Zeit trotz wtsk kein item auf Förderer
                         info.HU_Nummer = wtorder.HU_Nummer;
                         info.Quelle = destMach.getId();
-                        info.CP = srcdest.getId(); //Änderung auf src
+                        info.CP = srcdest.getId(); // Änderung auf src
                         break;
-
+                    case "MTRO": // Neu Zielförderer hat bereits HU
+                        info.HU_Nummer = wtorder.HU_Nummer;
+                        info.Quelle = destMach.getId();
+                        info.CP = destMach.getId();
+                        break;
                 }
 
                 info.MFS_Error = MFSError;
@@ -747,6 +756,15 @@ public class zFTS_Entity1 extends Entity {
         this.infoTG(null, "MTRE");
         this.poso = null;
         this.wtorder = null;
+        DestinationWay1.clear();
+        blockedTransfer = false;
+    }
+
+    public void handleMTRO() {
+        this.infoTG(null, "MTRO");
+        this.poso = null;
+        this.wtorder = null;
+        this.delItem(this, getFirstItem());
         DestinationWay1.clear();
         blockedTransfer = false;
     }
