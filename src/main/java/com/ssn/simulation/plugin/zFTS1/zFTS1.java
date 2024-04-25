@@ -39,6 +39,7 @@ public class zFTS1 extends Entity {
     protected List<Integer> relevantWpcode_ProductionArea; // muss noch für KTECH eingebunden werden mitsamt
                                                            // Logikänderung in FTF
     protected int minWpcode_ProductionArea;
+    protected int capacityCheck_s;
 
     protected int FTFControllerID;
     @JsonIgnore
@@ -72,6 +73,7 @@ public class zFTS1 extends Entity {
         this.ignoreHuId = false;
         this.minWpcode_ProductionArea = 51;
         relevantWpcode_ProductionArea = new ArrayList<>();
+        this.capacityCheck_s = 3;
     }
 
     // bei Bearbeitung der Attribute
@@ -88,6 +90,7 @@ public class zFTS1 extends Entity {
         // setListProperty("relevantWpcode_ProductionArea",
         // relevantWpcode_ProductionArea, "FTF Controller", new IntegerListProperty());
         setIntegerProperty("minWpcode_ProductionArea", minWpcode_ProductionArea, "FTF Controller");
+        setIntegerProperty("capacityCheck_s", capacityCheck_s, "FTF Controller");
 
     }
 
@@ -105,6 +108,7 @@ public class zFTS1 extends Entity {
         // this.relevantWpcode_ProductionArea =
         // getListProperty("relevantWpcode_ProductionArea", Integer.class);
         this.minWpcode_ProductionArea = getIntegerProperty("minWpcode_ProductionArea");
+        this.capacityCheck_s = getIntegerProperty("capacityCheck_s");
     }
 
     // Kategorie unter Menübaum
@@ -338,7 +342,16 @@ public class zFTS1 extends Entity {
     public void useUnutiliziedFTF(zTG1_WTSK TWtsk) {
 
         zFTS_Entity1 newFTF = getFreeFTFInit(1); // Wenn vorher kein POSO gesendet wurde
-        FTFOrder.put(newFTF, TWtsk);
+        if (newFTF != null) {
+            FTFOrder.put(newFTF, TWtsk);
+        } else {
+            core.logError(this, "No Free FTF could be found WTSK " + TWtsk + " currently can not be assigned to a FTF");
+            // Event Erstellung
+            zDelay dEvent = new zDelay(core.now() + (capacityCheck_s * 1000), this, TWtsk); // Einbau Parameter statt
+                                                                                            // 10000
+            core.addEvent(dEvent);
+
+        }
     }
 
     // Kapazitäts und Zuordnungstests auf FTS bezogene Entitäten :
