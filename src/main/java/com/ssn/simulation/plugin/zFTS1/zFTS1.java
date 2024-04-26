@@ -345,7 +345,10 @@ public class zFTS1 extends Entity {
             FTFOrder.put(newFTF, TWtsk);
             onTrigger(this);
         } else {
-            core.logError(this, "No Free FTF could be found WTSK " + TWtsk + " currently can not be assigned to a FTF");
+            core.logInfo(this,
+                    "No Free FTF could be found WTSK " + TWtsk
+                            + " currently can not be assigned to a FTF, FTF checking will be tried again after "
+                            + capacityCheck_s + " seconds");
             // Event Erstellung
             zDelay dEvent = new zDelay(core.now() + (capacityCheck_s * 1000), this, TWtsk); // Einbau Parameter statt
                                                                                             // 10000
@@ -382,7 +385,6 @@ public class zFTS1 extends Entity {
             }
         }
 
-        core.logError(this, "notwendigen Verfügbarkeits Überprüfungen verhinden FTF Zuweisung");
         return null;
     }
 
@@ -401,7 +403,6 @@ public class zFTS1 extends Entity {
                 // paarbitTG.Paarbit = null; // um IF Paarbit Abfrage zu umgehen
                 paarbitWtsk.remove(entry.getKey());
                 useUnutiliziedFTF(paarbitTG);
-                onTrigger(this);
             }
 
         }
