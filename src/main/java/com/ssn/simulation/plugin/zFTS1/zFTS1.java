@@ -335,7 +335,6 @@ public class zFTS1 extends Entity {
         }
         // FreeFTF Auslagerung
         this.useUnutiliziedFTF(TWtsk);
-        onTrigger(this);
 
     }
 
@@ -344,6 +343,7 @@ public class zFTS1 extends Entity {
         zFTS_Entity1 newFTF = getFreeFTFInit(1); // Wenn vorher kein POSO gesendet wurde
         if (newFTF != null) {
             FTFOrder.put(newFTF, TWtsk);
+            onTrigger(this);
         } else {
             core.logError(this, "No Free FTF could be found WTSK " + TWtsk + " currently can not be assigned to a FTF");
             // Event Erstellung

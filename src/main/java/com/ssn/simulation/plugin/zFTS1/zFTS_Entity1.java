@@ -670,7 +670,7 @@ public class zFTS_Entity1 extends Entity {
                         break;
                     case "MTRO": // Neu Zielförderer hat bereits HU
                         info.HU_Nummer = wtorder.HU_Nummer;
-                        info.Quelle = destMach.getId();
+                        info.Quelle = srcdest.getId();
                         info.CP = destMach.getId();
                         break;
                 }
