@@ -39,6 +39,7 @@ public class zFTS1 extends Entity {
     protected int paarbitDuration_s;
     protected List<Integer> relevantWpcode_ProductionArea;
     protected int minWpcode_ProductionArea;
+    protected int capacityCheck_s;
 
     @JsonIgnore
     protected transient Map<String, zFTS_Entity1> FTSR; // FTS Klasse
@@ -72,6 +73,7 @@ public class zFTS1 extends Entity {
         this.paarbitDuration_s = 300;
         this.minWpcode_ProductionArea = 51;
         relevantWpcode_ProductionArea = new ArrayList<>();
+        this.capacityCheck_s = 3;
     }
 
     // bei Bearbeitung der Attribute
@@ -88,6 +90,7 @@ public class zFTS1 extends Entity {
         setListProperty("relevantWpcode_ProductionArea",
                 relevantWpcode_ProductionArea, "FTF Controller", new IntegerListProperty());
         setIntegerProperty("minWpcode_ProductionArea", minWpcode_ProductionArea, "FTF Controller");
+        setIntegerProperty("capacityCheck_s", capacityCheck_s, "FTF Controller");
 
     }
 
@@ -104,6 +107,7 @@ public class zFTS1 extends Entity {
         this.paarbitDuration_s = getIntegerProperty("paarbitDuration");
         this.relevantWpcode_ProductionArea = getListProperty("relevantWpcode_ProductionArea", Integer.class);
         this.minWpcode_ProductionArea = getIntegerProperty("minWpcode_ProductionArea");
+        this.capacityCheck_s = getIntegerProperty("capacityCheck_s");
     }
 
     // Kategorie unter Menübaum
@@ -182,7 +186,6 @@ public class zFTS1 extends Entity {
         // hier Sequencechek bzw. Quittierungserkennung möglich cn1
         if (telegram instanceof zTG1_POSO) {
             zTG1_POSO TPoso = (zTG1_POSO) telegram;
-
             core.logInfo(this, "Poso Telegramm erhalten"); // Telegramm Logik
             handlePOSO(TPoso);
             triggerEntity();
@@ -276,15 +279,20 @@ public class zFTS1 extends Entity {
             if (useFTF != null) {
                 core.logInfo(this, " Ausgeführt werden soll POSO mit FTF " + useFTF);
                 FTFOrder.put(useFTF, TPoso); // FTFOrder befüllen für onTrigger Methode
+                onTrigger(this);
             } else {
-                core.logError(this, " kein freies FTF gefunden ");
+                core.logInfo(this, "No Free FTF could be found WTSK " + TPoso + " currently can not be assigned to a FTF");
+                // Event Erstellung
+                zDelay dEvent = new zDelay(core.now() + (capacityCheck_s * 10000), this, TPoso); // Einbau Parameter statt
+                                                                                                 // 10000
+                core.addEvent(dEvent);
+    
             }
         } catch (Exception e) {
             core.logError(TPoso, "FTF Zuweisung nicht möglich");
             return;
         }
-        onTrigger(this);
-        ;
+        
 
     }
 
@@ -311,7 +319,7 @@ public class zFTS1 extends Entity {
                     if (Tvalue.assigned && Tvalue.HU_Nummer.equals(TWtsk.HU_Nummer)
                             && Tvalue.Quelle.equals(TWtsk.Quelle)) {
                         zFTS_Entity1 FTF = ftfkey;
-                        core.logError(this, "passender POSO zu WTSK gefunden ");
+                        core.logInfo(this, "passender POSO zu WTSK gefunden ");
                         FTFOrder.put(FTF, TWtsk); // FTFOrder befüllen für onTrigger Methode
                         onTrigger(this);
                         return;
@@ -329,22 +337,22 @@ public class zFTS1 extends Entity {
         }
 
         // FreeFTF Auslagerung
-        this.useUnutiliziedFTF(TWtsk);
-
-        onTrigger(this);
+        this.useUnutiliziedFTFwtsk(TWtsk);
 
     }
 
-    public void useUnutiliziedFTF(zTG1_WTSK TWtsk) {
+    public void useUnutiliziedFTFwtsk(zTG1_WTSK TWtsk) {
 
         zFTS_Entity1 newFTF = getFreeFTFInit(1); // Wenn vorher kein POSO gesendet wurde
         if (newFTF != null) {
             FTFOrder.put(newFTF, TWtsk);
+            onTrigger(this);
         } else {
-            core.logError(this, "No Free FTF could be found WTSK " + TWtsk + " currently can not be assigned to a FTF");
+            core.logInfo(this, "No Free FTF could be found WTSK " + TWtsk + " currently can not be assigned to a FTF");
             // Event Erstellung
-            zDelay dEvent = new zDelay(core.now() + 10000, this, TWtsk); // Einbau Parameter statt 10000
-            core.addEvent(dEvent); 
+            zDelay dEvent = new zDelay(core.now() + (capacityCheck_s * 10000), this, TWtsk); // Einbau Parameter statt
+                                                                                             // 10000
+            core.addEvent(dEvent);
 
         }
     }
@@ -375,7 +383,6 @@ public class zFTS1 extends Entity {
             }
         }
 
-        core.logError(this, "notwendigen Verfügbarkeits Überprüfungen verhinden FTF Zuweisung");
         return null;
     }
 
@@ -393,8 +400,7 @@ public class zFTS1 extends Entity {
             if (entry.getKey() == paarbitTG) {
                 // paarbitTG.Paarbit = null; // um IF Paarbit Abfrage zu umgehen
                 paarbitWtsk.remove(entry.getKey());
-                useUnutiliziedFTF(paarbitTG);
-                onTrigger(this);
+                useUnutiliziedFTFwtsk(paarbitTG);
             }
 
         }

@@ -4,19 +4,27 @@ import com.ssn.simulation.core.Event;
 
 public class zDelay extends Event {
 
-    public zTG1_WTSK wtsk;
+    public zTG1 order;
 
     public zFTS1 controller;
 
-    public zDelay(long time, zFTS1 controller, zTG1_WTSK wtsk) {
+    public zDelay(long time, zFTS1 controller, zTG1 order) {
         super(time);
         this.controller = controller;
-        this.wtsk = wtsk;
+        this.order = order;
     }
 
     @Override
     public void onEvent() {
-        this.controller.useUnutiliziedFTF(wtsk);
+        if( this.order instanceof zTG1_WTSK){
+            zTG1_WTSK TWTSK = (zTG1_WTSK) order;
+            this.controller.useUnutiliziedFTFwtsk(TWTSK);
+        }
+        else{
+            zTG1_POSO TPOSO = (zTG1_POSO) order;
+            this.controller.handlePOSO(TPOSO);
+        }
+        
     }
 
 }
