@@ -1,4 +1,5 @@
 com\ssn\simulation\plugin\zFTS1\zFTS_Entity1.class
+com\ssn\simulation\plugin\zFTS1\zDelay.class
 com\ssn\simulation\plugin\zFTS1\zTG1_INFO.class
 com\ssn\simulation\plugin\zFTS1\zRoutingStrategy.class
 com\ssn\simulation\plugin\zFTS1\zTG1_LIFE.class

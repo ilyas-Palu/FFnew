@@ -40,6 +40,7 @@ public class zFTS1 extends Entity {
     protected List<Integer> relevantWpcode_ProductionArea;
     protected int minWpcode_ProductionArea;
     protected int capacityCheck_s;
+    protected String wartePlatz;
 
     @JsonIgnore
     protected transient Map<String, zFTS_Entity1> FTSR; // FTS Klasse
@@ -91,7 +92,7 @@ public class zFTS1 extends Entity {
                 relevantWpcode_ProductionArea, "FTF Controller", new IntegerListProperty());
         setIntegerProperty("minWpcode_ProductionArea", minWpcode_ProductionArea, "FTF Controller");
         setIntegerProperty("capacityCheck_s", capacityCheck_s, "FTF Controller");
-
+        setStringProperty("wartePlatz", wartePlatz, "FTF Controller");
     }
 
     // bei Bearbeitung der Eigenschaften
@@ -108,6 +109,7 @@ public class zFTS1 extends Entity {
         this.relevantWpcode_ProductionArea = getListProperty("relevantWpcode_ProductionArea", Integer.class);
         this.minWpcode_ProductionArea = getIntegerProperty("minWpcode_ProductionArea");
         this.capacityCheck_s = getIntegerProperty("capacityCheck_s");
+        this.wartePlatz = getStringProperty("wartePlatz");
     }
 
     // Kategorie unter Menübaum
@@ -281,18 +283,19 @@ public class zFTS1 extends Entity {
                 FTFOrder.put(useFTF, TPoso); // FTFOrder befüllen für onTrigger Methode
                 onTrigger(this);
             } else {
-                core.logInfo(this, "No Free FTF could be found WTSK " + TPoso + " currently can not be assigned to a FTF");
+                core.logInfo(this,
+                        "No Free FTF could be found WTSK " + TPoso + " currently can not be assigned to a FTF");
                 // Event Erstellung
-                zDelay dEvent = new zDelay(core.now() + (capacityCheck_s * 10000), this, TPoso); // Einbau Parameter statt
+                zDelay dEvent = new zDelay(core.now() + (capacityCheck_s * 10000), this, TPoso); // Einbau Parameter
+                                                                                                 // statt
                                                                                                  // 10000
                 core.addEvent(dEvent);
-    
+
             }
         } catch (Exception e) {
             core.logError(TPoso, "FTF Zuweisung nicht möglich");
             return;
         }
-        
 
     }
 
@@ -324,6 +327,19 @@ public class zFTS1 extends Entity {
                         onTrigger(this);
                         return;
 
+                    }
+                } else {
+                    if (TGvalue instanceof zTG1_WTSK) {// Wartepositionslogik
+                        zTG1_WTSK Tw1 = (zTG1_WTSK) TGvalue;
+                        if (TWtsk.Quelle.equals(wartePlatz)) {
+                            if (Tw1.Ziel.equals(TWtsk.Quelle)&& Tw1.HU_Nummer.equals(TWtsk.HU_Nummer) ) {
+                                zFTS_Entity1 FTF = ftfkey;
+                                core.logInfo(this, "passende Wartepositionslogik FTF gefunden");
+                                FTFOrder.put(FTF, TWtsk);
+                                onTrigger(this);
+                                return;
+                            }
+                        }
                     }
                 }
 
@@ -416,5 +432,9 @@ public class zFTS1 extends Entity {
 
     public boolean isIgnoreHuId() {
         return ignoreHuId;
+    }
+
+    public String getWartePlatz() {
+        return wartePlatz;
     }
 }

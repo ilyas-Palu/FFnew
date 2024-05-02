@@ -49,6 +49,8 @@ public class zFTS_Entity1 extends Entity {
     protected transient boolean assigned = false;
     @JsonIgnore
     protected transient boolean blockedTransfer = false;
+    @JsonIgnore
+    protected transient boolean waitingActive = false;
 
     public zFTS_Entity1() {
         sizex = 0.9;
@@ -110,6 +112,7 @@ public class zFTS_Entity1 extends Entity {
         wtorder = null;
         posoSrc = null;
         paarbitActive = false;
+        waitingActive = false;
         DestinationWay1 = new LinkedHashMap<>(); // neue Map zur Archivierung
         for (Entity entity : core.getEntities()) {
             if (entity instanceof zFTS1) { // Austausch eigene Controller Entität! cn1
@@ -157,142 +160,148 @@ public class zFTS_Entity1 extends Entity {
         if (!isError()) {
             if (!isMoving()) {
                 if (!blockedTransfer) {
-                    if (!DestinationWay1.isEmpty()) {
-                        Entry<String, zFTS_Waypoint> entry = DestinationWay1.entrySet().iterator().next();
-                        zFTS_Waypoint zwp = entry.getValue();
-                        String vProcess = entry.getKey();
-                        // Abfrage ob Waypointcodes passen und diese noch nicht erreicht
-                        if (vProcess.equals("POSO")) { // besser wieder ändern auf poso.subtype bzw. statisches Attribut
-                            this.posoTime = core.now();
-                            if ((zwp.getWaypointCode() == 11 || zwp.getWaypointCode() == 12
-                                    || zwp.getWaypointCode() == 13) && this.isAt(to)) { // geändete von 1 auf to
-                                core.logInfo(this, "POSO wurde erkannt");
-                                this.moveFTF(zwp);
-                                lastWaypointCode = zwp.getWaypointCode(); // Übergabe aktuelle Position
-                                from = zwp; // Teiweise Rendundanz zwischen Lastwaypointcode & from
+                    if (!waitingActive) {
+                        if (!DestinationWay1.isEmpty()) {
+                            Entry<String, zFTS_Waypoint> entry = DestinationWay1.entrySet().iterator().next();
+                            zFTS_Waypoint zwp = entry.getValue();
+                            String vProcess = entry.getKey();
+                            // Abfrage ob Waypointcodes passen und diese noch nicht erreicht
+                            if (vProcess.equals("POSO")) { // besser wieder ändern auf poso.subtype bzw. statisches
+                                                           // Attribut
+                                this.posoTime = core.now();
+                                if ((zwp.getWaypointCode() == 11 || zwp.getWaypointCode() == 12
+                                        || zwp.getWaypointCode() == 13) && this.isAt(to)) { // geändete von 1 auf to
+                                    core.logInfo(this, "POSO wurde erkannt");
+                                    this.moveFTF(zwp);
+                                    lastWaypointCode = zwp.getWaypointCode(); // Übergabe aktuelle Position
+                                    from = zwp; // Teiweise Rendundanz zwischen Lastwaypointcode & from
+                                    return;
+                                }
+
+                                if (!this.posoSrc.hasItem()) {
+                                    if (!this.posoSrc.hasItem()) {
+                                        zInfo_MPOE checkEvent = new zInfo_MPOE(
+                                                core.now() + (long) zwp.getMpoe_duration_ms());
+                                        checkEvent.setConveyor(posoSrc);
+                                        checkEvent.setWP(zwp.getWaypointCode());
+                                        checkEvent.setFTF(this);
+                                        core.addEvent(checkEvent);
+                                    }
+                                }
+
+                                this.DestinationWay1.remove(vProcess);
+
+                                return;
+
+                            }
+
+                            if (this.wtorder != null) {
+                                if (vProcess.contains("WTSK")) {
+                                    if (from == zwp) { // lastdest erreicht (bzw. Quellplatz)
+                                        if (vProcess.contains("Q")) {
+                                            if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {// ->im
+                                                // Produktionsnetz
+                                                this.moveproddestx(vProcess, false);
+                                                if (!isMoving()) {
+                                                    this.moveproddesty(vProcess, false);
+                                                } else {
+                                                    return;
+                                                }
+                                            }
+                                            // Item Transfer cn1
+                                            if (isMoving()) {
+                                                return;
+                                            } else if (!hasItem()) {
+                                                handleSrcTransfer(core.now() + 5000, vProcess);
+                                                if (blockedTransfer) {
+                                                    return;
+                                                }
+                                            }
+
+                                        } else {
+                                            if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
+                                                this.moveproddestx(vProcess, false);
+                                                if (!isMoving()) {
+                                                    this.moveproddesty(vProcess, false);
+                                                } else {
+                                                    return;
+                                                }
+
+                                            }
+                                            if (!isMoving()) {
+                                                handleDestTransfer(core.now() + 30000);
+                                                if (waitingActive) {
+                                                    return;
+                                                }
+                                            } else {
+                                                return;
+                                            }
+                                            // cn1 hier evtl Paarbit Abfrage in Verbindung mit WTCO TG (Paarbit Boolean
+                                            // löschen)
+                                            if (!paarbitActive) {
+                                                this.wtorder = null;
+                                                poso = null;
+                                            }
+                                        }
+                                        this.DestinationWay1.remove(vProcess);
+
+                                        // löschen Eintrag
+                                        return;
+                                    } else {
+                                        if (this.isAt(from)) { // ->Routing möglich
+                                            if (from.nextWaypoint(zwp.getWaypointCode()) != null) {
+                                                from = from.nextWaypoint(zwp.getWaypointCode());
+                                                core.logInfo(this,
+                                                        "Waypoint Routing erfolgreich Beauftragung nach "
+                                                                + from.getId());
+                                                this.moveFTF(from);
+                                                lastWaypointCode = from.getWaypointCode();
+                                                return;
+                                            }
+                                        } else {
+                                            if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
+                                                if (!isMoving()) {
+                                                    moveFTF(from);
+                                                    return;
+                                                }
+                                            } // cn1
+                                        }
+                                    }
+                                    ;
+
+                                }
+
+                                // }
+                            }
+
+                        } else {
+
+                            if (this.assigned == true && poso == null) { // um für WTSK in Controller Entität nicht zu
+                                                                         // blocken
+                                this.assigned = false; // evtl nach wtco 1mal ausführen
+                            }
+
+                            if (!this.isAt(to) && !this.hasItem() && (lastWaypointCode < 11 || lastWaypointCode > 14)) {
+                                if (this.isAt(from)) {
+                                    if (from.nextWaypoint(to.getWaypointCode()) != null) { // rendundante logik mit wtsk
+                                                                                           // evtl
+                                                                                           // auslagern
+                                        from = from.nextWaypoint(to.getWaypointCode());
+                                        core.logInfo(this,
+                                                "Waypoint Routing erfolgreich, Beauftragung nach" + from.getId());
+                                        this.moveFTF(from);
+                                        lastWaypointCode = from.getWaypointCode();
+                                        return;
+                                    }
+                                } else {
+                                    this.moveOutMach();
+                                    if (!this.isMoving()) {
+
+                                        moveFTF(from);
+                                    }
+                                }
                                 return;
                             }
-
-                            if (!this.posoSrc.hasItem()) {
-                                if (!this.posoSrc.hasItem()) {
-                                    zInfo_MPOE checkEvent = new zInfo_MPOE(
-                                            core.now() + (long) zwp.getMpoe_duration_ms());
-                                    checkEvent.setConveyor(posoSrc);
-                                    checkEvent.setWP(zwp.getWaypointCode());
-                                    checkEvent.setFTF(this);
-                                    core.addEvent(checkEvent);
-                                }
-                            }
-
-                            this.DestinationWay1.remove(vProcess);
-
-                            return;
-
-                        }
-
-                        if (this.wtorder != null) {
-                            if (vProcess.contains("WTSK")) {
-                                if (from == zwp) { // lastdest erreicht (bzw. Quellplatz)
-                                    if (vProcess.contains("Q")) {
-                                        if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {// ->im
-                                            // Produktionsnetz
-                                            this.moveproddestx(vProcess, false);
-                                            if (!isMoving()) {
-                                                this.moveproddesty(vProcess, false);
-                                            } else {
-                                                return;
-                                            }
-                                        }
-                                        // Item Transfer cn1
-                                        if (isMoving()) {
-                                            return;
-                                        } else if (!hasItem()) {
-                                            handleSrcTransfer(core.now() + 5000, vProcess);
-                                            if (blockedTransfer) {
-                                                return;
-                                            }
-                                        }
-
-                                    } else {
-                                        if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
-                                            this.moveproddestx(vProcess, false);
-                                            if (!isMoving()) {
-                                                this.moveproddesty(vProcess, false);
-                                            } else {
-                                                return;
-                                            }
-
-                                        }
-                                        if (!isMoving()) {
-                                            handleDestTransfer(core.now() + 30000);
-                                        } else {
-                                            return;
-                                        }
-
-                                        // cn1 hier evtl Paarbit Abfrage in Verbindung mit WTCO TG (Paarbit Boolean
-                                        // löschen)
-                                        if (!paarbitActive) {
-                                            this.wtorder = null;
-                                            poso = null;
-                                        }
-                                    }
-                                    this.DestinationWay1.remove(vProcess);
-
-                                    // löschen Eintrag
-                                    return;
-                                } else {
-                                    if (this.isAt(from)) { // ->Routing möglich
-                                        if (from.nextWaypoint(zwp.getWaypointCode()) != null) {
-                                            from = from.nextWaypoint(zwp.getWaypointCode());
-                                            core.logInfo(this,
-                                                    "Waypoint Routing erfolgreich Beauftragung nach " + from.getId());
-                                            this.moveFTF(from);
-                                            lastWaypointCode = from.getWaypointCode();
-                                            return;
-                                        }
-                                    } else {
-                                        if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
-                                            if (!isMoving()) {
-                                                moveFTF(from);
-                                                return;
-                                            }
-                                        } // cn1
-                                    }
-                                }
-                                ;
-
-                            }
-
-                            // }
-                        }
-
-                    } else {
-
-                        if (this.assigned == true && poso == null) { // um für WTSK in Controller Entität nicht zu
-                                                                     // blocken
-                            this.assigned = false; // evtl nach wtco 1mal ausführen
-                        }
-
-                        if (!this.isAt(to) && !this.hasItem() && (lastWaypointCode < 11 || lastWaypointCode > 14)) {
-                            if (this.isAt(from)) {
-                                if (from.nextWaypoint(to.getWaypointCode()) != null) { // rendundante logik mit wtsk
-                                                                                       // evtl
-                                                                                       // auslagern
-                                    from = from.nextWaypoint(to.getWaypointCode());
-                                    core.logInfo(this,
-                                            "Waypoint Routing erfolgreich, Beauftragung nach" + from.getId());
-                                    this.moveFTF(from);
-                                    lastWaypointCode = from.getWaypointCode();
-                                    return;
-                                }
-                            } else {
-                                this.moveOutMach();
-                                if (!this.isMoving()) {
-
-                                    moveFTF(from);
-                                }
-                            }
-                            return;
                         }
                     }
                 }
@@ -445,7 +454,13 @@ public class zFTS_Entity1 extends Entity {
         }
         DestinationWay1.put(combinedKeyZ, lastdest1); // eigentliches Ziel
 
-    }
+        if (this.waitingActive == true) {
+            this.waitingActive = false;
+        }
+
+        
+
+    }   
 
     public zFTS_Waypoint allmap(String dest) {
         for (zFTS_Waypoint element : allWaypoints) {
@@ -541,6 +556,11 @@ public class zFTS_Entity1 extends Entity {
         blockedTransfer = true;
         if (this.destMach != null) {
             core.logInfo(this, " jetzt Durchführung der HU Abgabelogik ");
+            this.warteLogik();
+            if (this.waitingActive) {
+                // evtl boolean einbau inklusive handlestaufruf abfrage
+                return;
+            }
             if (this.hasItem()) {
                 Item HU = this.getFirstItem();
                 this.moveItem(destMach, HU, 0);
@@ -729,6 +749,13 @@ public class zFTS_Entity1 extends Entity {
 
             }
 
+        }
+    }
+
+    public void warteLogik() {
+        if (this.destMach == core.getEntityById(controller.getWartePlatz())) {
+            waitingActive = true;
+            this.DestinationWay1.clear();
         }
     }
 
