@@ -231,6 +231,7 @@ public class zFTS1 extends Entity {
                     }
                 }
                 if (firstValue instanceof zTG1_WTSK) {
+                    this.FTFOrderpast.put(firstValue, firstKey); // Archivierung WTSK
                     zTG1_WTSK wtValue = (zTG1_WTSK) firstValue;
                     if (firstKey != null) {
                         core.logInfo(this, "assign WTSK order " + " to FTF " + firstKey);
@@ -332,7 +333,7 @@ public class zFTS1 extends Entity {
                     if (TGvalue instanceof zTG1_WTSK) {// Wartepositionslogik
                         zTG1_WTSK Tw1 = (zTG1_WTSK) TGvalue;
                         if (TWtsk.Quelle.equals(wartePlatz)) {
-                            if (Tw1.Ziel.equals(TWtsk.Quelle)&& Tw1.HU_Nummer.equals(TWtsk.HU_Nummer) ) {
+                            if (Tw1.Ziel.equals(TWtsk.Quelle) && Tw1.HU_Nummer.equals(TWtsk.HU_Nummer)) {
                                 zFTS_Entity1 FTF = ftfkey;
                                 core.logInfo(this, "passende Wartepositionslogik FTF gefunden");
                                 FTFOrder.put(FTF, TWtsk);
