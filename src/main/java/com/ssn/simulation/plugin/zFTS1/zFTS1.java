@@ -75,6 +75,7 @@ public class zFTS1 extends Entity {
         this.minWpcode_ProductionArea = 51;
         relevantWpcode_ProductionArea = new ArrayList<>();
         this.capacityCheck_s = 3;
+        this.wartePlatz = "430-R0334-WP-01";
     }
 
     // bei Bearbeitung der Attribute
