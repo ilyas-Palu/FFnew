@@ -458,9 +458,7 @@ public class zFTS_Entity1 extends Entity {
             this.waitingActive = false;
         }
 
-        
-
-    }   
+    }
 
     public zFTS_Waypoint allmap(String dest) {
         for (zFTS_Waypoint element : allWaypoints) {
@@ -559,6 +557,7 @@ public class zFTS_Entity1 extends Entity {
             this.warteLogik();
             if (this.waitingActive) {
                 // evtl boolean einbau inklusive handlestaufruf abfrage
+                blockedTransfer = false;
                 return;
             }
             if (this.hasItem()) {
