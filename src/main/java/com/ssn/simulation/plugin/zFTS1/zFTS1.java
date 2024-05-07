@@ -56,6 +56,8 @@ public class zFTS1 extends Entity {
     protected transient List<zTG1> orders; // eigene Telegrammklasse
     @JsonIgnore
     protected transient ZFTS_Connector connector; // ersetzen mit Telegrammspezifischen Verbinder
+    @JsonIgnore
+    protected transient Map<zTG1, Boolean> delayList; // Liste für zurückgestellte Telegramme
 
     // Konstruktor mit default Wertzuweisung, zusätzlich zu Entity Konstruktor
     public zFTS1() {
@@ -132,6 +134,7 @@ public class zFTS1 extends Entity {
         this.FTFOrder = new LinkedHashMap<>(); // neue Map zur Verbindung der Orders mit FTF Entität -> Linked für
                                                // korrekte Reihenfolge
         this.FTFOrderpast = new LinkedHashMap<>(); // neue Map zur Archivierung
+        this.delayList = new LinkedHashMap<>();
         for (Entity entity : core.getEntities()) {
             if (entity instanceof zFTS_Entity1) {
                 zFTS_Entity1 FTF = (zFTS_Entity1) entity;
@@ -190,8 +193,8 @@ public class zFTS1 extends Entity {
         if (telegram instanceof zTG1_POSO) {
             zTG1_POSO TPoso = (zTG1_POSO) telegram;
             core.logInfo(this, "Poso Telegramm erhalten"); // Telegramm Logik
-            handlePOSO(TPoso);
-            triggerEntity();
+            useUnutiliziedFTFtg(TPoso);
+            // triggerEntity();
         }
 
         if (telegram instanceof zTG1_WTSK) {
@@ -277,34 +280,21 @@ public class zFTS1 extends Entity {
         }
     }
 
-    public void handlePOSO(zTG1_POSO TPoso) {
-        try {
-            zFTS_Entity1 useFTF = getFreeFTFInit(1); // Homeposition/Bahnhof
-            if (useFTF != null) {
-                core.logInfo(this, " Ausgeführt werden soll POSO mit FTF " + useFTF);
-                FTFOrder.put(useFTF, TPoso); // FTFOrder befüllen für onTrigger Methode
-                onTrigger(this);
-            } else {
-                core.logInfo(this,
-                        "No Free FTF could be found WTSK " + TPoso + " currently can not be assigned to a FTF");
-                // Event Erstellung
-                zDelay dEvent = new zDelay(core.now() + (capacityCheck_s * 10000), this, TPoso); // Einbau Parameter
-                                                                                                 // statt
-                                                                                                 // 10000
-                core.addEvent(dEvent);
-
+    public boolean hasPrio(zTG1 TG1) {
+        if (TG1 instanceof zTG1_WTSK) {
+            zTG1_WTSK TWtsk = (zTG1_WTSK) TG1;
+            if (TWtsk.Paarbit.equals("X")) {
+                return true;
             }
-        } catch (Exception e) {
-            core.logError(TPoso, "FTF Zuweisung nicht möglich");
-            return;
         }
+        return false;
 
     }
 
     public void handleWTSK(zTG1_WTSK TWtsk) {
 
         // Paarbitabfrage vor POSO, weil Bezug auf POSO bei Paarbit WTsk nicht vorhanden
-        if (TWtsk.Paarbit.equals("X") && paarbitDuration_s > 0) { // cn1 unsicher welches Zeichen Paarbit kennzeichnet
+        if (this.hasPrio(TWtsk) && paarbitDuration_s > 0) { // cn1 unsicher welches Zeichen Paarbit kennzeichnet
 
             this.handlePaarbit(TWtsk);
             return;
@@ -328,7 +318,6 @@ public class zFTS1 extends Entity {
                         FTFOrder.put(FTF, TWtsk); // FTFOrder befüllen für onTrigger Methode
                         onTrigger(this);
                         return;
-
                     }
                 } else {
                     if (TGvalue instanceof zTG1_WTSK) {// Wartepositionslogik
@@ -355,24 +344,63 @@ public class zFTS1 extends Entity {
         }
 
         // FreeFTF Auslagerung
-        this.useUnutiliziedFTFwtsk(TWtsk);
+        this.useUnutiliziedFTFtg(TWtsk);
 
     }
 
-    public void useUnutiliziedFTFwtsk(zTG1_WTSK TWtsk) {
+    public void useUnutiliziedFTFtg(zTG1 TG1) {
 
         zFTS_Entity1 newFTF = getFreeFTFInit(1); // Wenn vorher kein POSO gesendet wurde
-        if (newFTF != null) {
-            FTFOrder.put(newFTF, TWtsk);
-            onTrigger(this);
-        } else {
-            core.logInfo(this, "No Free FTF could be found WTSK " + TWtsk + " currently can not be assigned to a FTF");
-            // Event Erstellung
-            zDelay dEvent = new zDelay(core.now() + (capacityCheck_s * 10000), this, TWtsk); // Einbau Parameter statt
-                                                                                             // 10000
-            core.addEvent(dEvent);
+        if (newFTF != null && delayList.isEmpty()) {
 
+            FTFOrder.put(newFTF, TG1);
+            onTrigger(this);
+            return;
         }
+
+        core.logInfo(this,
+                "FTF Capacity is reached/nearly reached " + TG1 + " probably can not be assigned to a FTF for now"); // fehlende
+        // Logging
+        // Unterscheidung
+        // cn1
+
+        this.addDelayEntry(TG1);
+
+        if (newFTF != null) {
+            zTG1 nextTG = null;
+            for (Map.Entry<zTG1, Boolean> entry : delayList.entrySet()) {
+                if (entry.getValue() == true) {
+                    nextTG = entry.getKey();
+                    break;
+                }
+            }
+
+            if (nextTG == null) {
+                for (Map.Entry<zTG1, Boolean> entry : delayList.entrySet()) {
+                    nextTG = entry.getKey();
+                    break;
+                }
+
+            }
+            FTFOrder.put(newFTF, nextTG);
+            delayList.remove(nextTG);
+            onTrigger(this);
+            return;
+        } else {
+            // Event Erstellung
+            zDelay dEvent = new zDelay(core.now() + (capacityCheck_s * 10000), this, TG1);
+            core.addEvent(dEvent);
+        }
+
+    }
+
+    public void addDelayEntry(zTG1 TG1) {
+
+        if (!delayList.containsKey(TG1)) {
+            Boolean prioCheck = this.hasPrio(TG1);
+            delayList.put(TG1, prioCheck);
+        }
+
     }
 
     public void handlePaarbit(zTG1_WTSK tWtsk) {
@@ -418,7 +446,7 @@ public class zFTS1 extends Entity {
             if (entry.getKey() == paarbitTG) {
                 // paarbitTG.Paarbit = null; // um IF Paarbit Abfrage zu umgehen
                 paarbitWtsk.remove(entry.getKey());
-                useUnutiliziedFTFwtsk(paarbitTG);
+                useUnutiliziedFTFtg(paarbitTG);
             }
 
         }

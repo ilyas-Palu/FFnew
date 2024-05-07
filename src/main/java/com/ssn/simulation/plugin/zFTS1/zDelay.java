@@ -16,15 +16,8 @@ public class zDelay extends Event {
 
     @Override
     public void onEvent() {
-        if( this.order instanceof zTG1_WTSK){
-            zTG1_WTSK TWTSK = (zTG1_WTSK) order;
-            this.controller.useUnutiliziedFTFwtsk(TWTSK);
-        }
-        else{
-            zTG1_POSO TPOSO = (zTG1_POSO) order;
-            this.controller.handlePOSO(TPOSO);
-        }
-        
+        controller.useUnutiliziedFTFtg(order);
+
     }
 
 }
