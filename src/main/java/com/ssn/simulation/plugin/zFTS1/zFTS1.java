@@ -283,7 +283,7 @@ public class zFTS1 extends Entity {
     public boolean hasPrio(zTG1 TG1) {
         if (TG1 instanceof zTG1_WTSK) {
             zTG1_WTSK TWtsk = (zTG1_WTSK) TG1;
-            if (TWtsk.Paarbit.equals("X")) {
+            if (TWtsk.Prioritätsbit.equals("X")) {
                 return true;
             }
         }
@@ -294,7 +294,7 @@ public class zFTS1 extends Entity {
     public void handleWTSK(zTG1_WTSK TWtsk) {
 
         // Paarbitabfrage vor POSO, weil Bezug auf POSO bei Paarbit WTsk nicht vorhanden
-        if (this.hasPrio(TWtsk) && paarbitDuration_s > 0) { // cn1 unsicher welches Zeichen Paarbit kennzeichnet
+        if (TWtsk.Paarbit.equals("X") && paarbitDuration_s > 0) { // cn1 unsicher welches Zeichen Paarbit kennzeichnet
 
             this.handlePaarbit(TWtsk);
             return;
