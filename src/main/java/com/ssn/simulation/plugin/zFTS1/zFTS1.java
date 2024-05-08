@@ -132,6 +132,7 @@ public class zFTS1 extends Entity {
         this.FTFOrder = new LinkedHashMap<>(); // neue Map zur Verbindung der Orders mit FTF Entität -> Linked für
                                                // korrekte Reihenfolge
         this.FTFOrderpast = new LinkedHashMap<>(); // neue Map zur Archivierung
+        this.delayList = new LinkedHashMap<>();
         for (Entity entity : core.getEntities()) {
             if (entity instanceof zFTS_Entity1) {
                 zFTS_Entity1 FTF = (zFTS_Entity1) entity;
@@ -332,9 +333,9 @@ public class zFTS1 extends Entity {
         }
 
         core.logInfo(this,
-                "FTF Capacity is reached/nearly reached " + TG1 + " probably can not be assigned to a FTF for now"); 
+                "FTF Capacity is reached/nearly reached " + TG1 + " probably can not be assigned to a FTF for now");
         if (newTG) {
-            this.addDelayEntry(TG1); //change done
+            this.addDelayEntry(TG1); // change done
         }
         if (newFTF != null) {
             zTG1 nextTG = null;
