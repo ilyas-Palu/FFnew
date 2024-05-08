@@ -193,7 +193,7 @@ public class zFTS1 extends Entity {
         if (telegram instanceof zTG1_POSO) {
             zTG1_POSO TPoso = (zTG1_POSO) telegram;
             core.logInfo(this, "Poso Telegramm erhalten"); // Telegramm Logik
-            useUnutiliziedFTFtg(TPoso);
+            useUnutiliziedFTFtg(TPoso, true);
             // triggerEntity();
         }
 
@@ -276,7 +276,7 @@ public class zFTS1 extends Entity {
                 core.logInfo(this, "Telegramm hat Controller erreicht Typ: " + telegram.telegramsubtype);
             }
         } else {
-            core.logError(this, "unable to send telegram, no known telegrammtype: " + telegram);
+            core.logError(this, "unable to send telegram, no known telegrammtype for: " + telegram);
         }
     }
 
@@ -344,11 +344,11 @@ public class zFTS1 extends Entity {
         }
 
         // FreeFTF Auslagerung
-        this.useUnutiliziedFTFtg(TWtsk);
+        this.useUnutiliziedFTFtg(TWtsk, true);
 
     }
 
-    public void useUnutiliziedFTFtg(zTG1 TG1) {
+    public void useUnutiliziedFTFtg(zTG1 TG1, boolean newTG) {
 
         zFTS_Entity1 newFTF = getFreeFTFInit(1); // Wenn vorher kein POSO gesendet wurde
         if (newFTF != null && delayList.isEmpty()) {
@@ -363,9 +363,10 @@ public class zFTS1 extends Entity {
         // Logging
         // Unterscheidung
         // cn1
-
-        this.addDelayEntry(TG1);
-
+        if (newTG) {
+            this.addDelayEntry(TG1); // funktioniert nicht, weil vor Eventausführung Entry bereits gelöscht wurde,
+                                     // und entsprechend wieder hinzugefügt wird change done
+        }
         if (newFTF != null) {
             zTG1 nextTG = null;
             for (Map.Entry<zTG1, Boolean> entry : delayList.entrySet()) {
@@ -388,7 +389,7 @@ public class zFTS1 extends Entity {
             return;
         } else {
             // Event Erstellung
-            zDelay dEvent = new zDelay(core.now() + (capacityCheck_s * 10000), this, TG1);
+            zDelay dEvent = new zDelay(core.now() + (capacityCheck_s * 1000), this, TG1);
             core.addEvent(dEvent);
         }
 
@@ -446,7 +447,7 @@ public class zFTS1 extends Entity {
             if (entry.getKey() == paarbitTG) {
                 // paarbitTG.Paarbit = null; // um IF Paarbit Abfrage zu umgehen
                 paarbitWtsk.remove(entry.getKey());
-                useUnutiliziedFTFtg(paarbitTG);
+                useUnutiliziedFTFtg(paarbitTG, true);
             }
 
         }
