@@ -41,6 +41,8 @@ public class zFTS1 extends Entity {
     protected int minWpcode_ProductionArea;
     protected int capacityCheck_s;
     protected String wartePlatz;
+    protected boolean createHU;
+
 
     @JsonIgnore
     protected transient Map<String, zFTS_Entity1> FTSR; // FTS Klasse
@@ -78,6 +80,7 @@ public class zFTS1 extends Entity {
         relevantWpcode_ProductionArea = new ArrayList<>();
         this.capacityCheck_s = 3;
         this.wartePlatz = "430-R0334-WP-01";
+        this.createHU = false;
     }
 
     // bei Bearbeitung der Attribute
@@ -96,6 +99,7 @@ public class zFTS1 extends Entity {
         setIntegerProperty("minWpcode_ProductionArea", minWpcode_ProductionArea, "FTF Controller");
         setIntegerProperty("capacityCheck_s", capacityCheck_s, "FTF Controller");
         setStringProperty("wartePlatz", wartePlatz, "FTF Controller");
+        setBooleanProperty("createHU", createHU, "FTF Controller");
     }
 
     // bei Bearbeitung der Eigenschaften
@@ -113,6 +117,7 @@ public class zFTS1 extends Entity {
         this.minWpcode_ProductionArea = getIntegerProperty("minWpcode_ProductionArea");
         this.capacityCheck_s = getIntegerProperty("capacityCheck_s");
         this.wartePlatz = getStringProperty("wartePlatz");
+        this.createHU = getBooleanProperty("createHU");
     }
 
     // Kategorie unter Menübaum
@@ -468,4 +473,9 @@ public class zFTS1 extends Entity {
     public String getWartePlatz() {
         return wartePlatz;
     }
+    public boolean isCreateHU() {
+        return createHU;
+    }
+
+
 }
