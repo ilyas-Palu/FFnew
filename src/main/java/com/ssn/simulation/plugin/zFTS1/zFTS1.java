@@ -40,6 +40,7 @@ public class zFTS1 extends Entity {
                                                            // Logikänderung in FTF
     protected int minWpcode_ProductionArea;
     protected int capacityCheck_s;
+    protected boolean createHU;
 
     protected int FTFControllerID;
     @JsonIgnore
@@ -76,6 +77,7 @@ public class zFTS1 extends Entity {
         this.minWpcode_ProductionArea = 51;
         relevantWpcode_ProductionArea = new ArrayList<>();
         this.capacityCheck_s = 3;
+        this.createHU = false;
     }
 
     // bei Bearbeitung der Attribute
@@ -93,6 +95,7 @@ public class zFTS1 extends Entity {
         // relevantWpcode_ProductionArea, "FTF Controller", new IntegerListProperty());
         setIntegerProperty("minWpcode_ProductionArea", minWpcode_ProductionArea, "FTF Controller");
         setIntegerProperty("capacityCheck_s", capacityCheck_s, "FTF Controller");
+        setBooleanProperty("createHU", createHU, "FTF Controller");
 
     }
 
@@ -111,6 +114,7 @@ public class zFTS1 extends Entity {
         // getListProperty("relevantWpcode_ProductionArea", Integer.class);
         this.minWpcode_ProductionArea = getIntegerProperty("minWpcode_ProductionArea");
         this.capacityCheck_s = getIntegerProperty("capacityCheck_s");
+        this.createHU = getBooleanProperty("createHU");
     }
 
     // Kategorie unter Menübaum
@@ -447,4 +451,9 @@ public class zFTS1 extends Entity {
     public List<Integer> getRelevantWpcode_ProductionArea() {
         return relevantWpcode_ProductionArea;
     }
+
+    public boolean isCreateHU() {
+        return createHU;
+    }
+
 }

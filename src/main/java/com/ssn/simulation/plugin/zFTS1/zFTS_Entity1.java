@@ -538,21 +538,31 @@ public class zFTS_Entity1 extends Entity {
                     return;
                 } else {
                     this.handleMMHU();
+                    return;
                 }
-            } else // if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
-                   // //extra WPCode Abfrage gelöscht
-            if (core.now() < timeEnd) {
-                zInfo_MTRE checkMtre = new zInfo_MTRE(core.now() + 1000);
-                checkMtre.setConveyor(srcdest);
-                checkMtre.setEndTime(timeEnd);
-                checkMtre.setFTF(this);
-                checkMtre.setProcess(process);
-                core.addEvent(checkMtre);
+            } else { // if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
+                     // //extra WPCode Abfrage gelöscht
+                if (controller.isCreateHU()) {
+                    core.logInfo(this,
+                            "HU with HU_ID of WTSK will be created, since createHU field of controller is true");
+                    Item extraItem1 = new Item();
+                    extraItem1.setId(wtorder.HU_Nummer);
+                    srcdest.addItem(null, extraItem1);
+                }
+                if (core.now() < timeEnd) {
+                    zInfo_MTRE checkMtre = new zInfo_MTRE(core.now() + 1000);
+                    checkMtre.setConveyor(srcdest);
+                    checkMtre.setEndTime(timeEnd);
+                    checkMtre.setFTF(this);
+                    checkMtre.setProcess(process);
+                    core.addEvent(checkMtre);
 
-                return;
-            } else {
-                this.handleMTRE();
+                    return;
+                } else {
+                    this.handleMTRE();
+                    return;
 
+                }
             }
             // }
         }
