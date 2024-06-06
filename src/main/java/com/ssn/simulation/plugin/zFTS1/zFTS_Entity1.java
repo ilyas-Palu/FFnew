@@ -281,7 +281,7 @@ public class zFTS_Entity1 extends Entity {
                                 this.assigned = false; // evtl nach wtco 1mal ausführen
                             }
 
-                            if (!this.isAt(to) && !this.hasItem() && (lastWaypointCode < 11 || lastWaypointCode > 14)) {
+                            if (!this.isAt(to) && !this.hasItem() && (lastWaypointCode < 11 || lastWaypointCode > 13)) {
                                 if (this.isAt(from)) {
                                     if (from.nextWaypoint(to.getWaypointCode()) != null) { // rendundante logik mit wtsk
                                                                                            // evtl
@@ -721,7 +721,9 @@ public class zFTS_Entity1 extends Entity {
         if (this.isAt(WP)) {
             this.controller.FTFOrderpast.remove(this.poso); // wichtig um FTF endgültig aus Zuweisung zu entfernen
             this.moveFTF(to);
+            this.lastWaypointCode = to.getWaypointCode();
             this.infoTG(null, "MPOE");
+            //DestinationWay1.clear();
             this.poso = null;
             this.posoSrc = null;
         }
