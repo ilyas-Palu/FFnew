@@ -106,8 +106,6 @@ public class zTG1 implements Telegram, Serializable {
 
         String Telegramsubtypecheck = telegrammstring.substring(44, 48);
 
-        // header.stringtelegram = telegrammstring;
-
         switch (Telegramsubtypecheck) {
             case "WTSK":
                 return new zTG1_WTSK(telegrammstring);

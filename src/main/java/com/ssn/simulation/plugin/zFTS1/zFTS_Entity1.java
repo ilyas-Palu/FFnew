@@ -201,7 +201,7 @@ public class zFTS_Entity1 extends Entity {
                                         if (vProcess.contains("Q")) {
                                             if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {// ->im
                                                 // Produktionsnetz
-                                                this.moveproddestx(vProcess, false);
+                                                this.moveproddestx(vProcess);
                                                 if (!isMoving()) {
                                                     this.moveproddesty(vProcess, false);
                                                 } else {
@@ -220,7 +220,7 @@ public class zFTS_Entity1 extends Entity {
 
                                         } else {
                                             if (lastWaypointCode >= this.controller.getMinWpcode_ProductionArea()) {
-                                                this.moveproddestx(vProcess, false);
+                                                this.moveproddestx(vProcess);
                                                 if (!isMoving()) {
                                                     this.moveproddesty(vProcess, false);
                                                 } else {
@@ -248,7 +248,7 @@ public class zFTS_Entity1 extends Entity {
                                         // löschen Eintrag
                                         return;
                                     } else {
-                                        if (this.isAt(from)) { // ->Routing möglich
+                                        if (this.isAt(from)) { // ->Routing
                                             if (from.nextWaypoint(zwp.getWaypointCode()) != null) {
                                                 from = from.nextWaypoint(zwp.getWaypointCode());
                                                 core.logInfo(this,
@@ -316,24 +316,17 @@ public class zFTS_Entity1 extends Entity {
 
     }
 
-    public void moveproddestx(String ent, boolean rev) {
+    public void moveproddestx(String ent) {
         float prx = 0;
-        // float pry = 0;
-        if ((ent.contains("Z") && !rev) || ((!ent.contains("Z")) && rev)) {
+        if (ent.contains("Z")) {
             prx = (float) this.destMach.getPosx();
-            // pry = (float) this.destMach.getPosy(); // y eig irrelevant
         } else {
             prx = (float) this.srcdest.getPosx();
-            // pry = (float) this.srcdest.getPosy();
-        }
-        if (rev) { // mittlerweile irrelevant
-            prx = (float) this.from.getPosx();
         }
         if (this.posx - prx < 0.03 && this.posx - prx > -0.03) { // Abfrage ob Position bereits stimmt
             return;
         }
 
-        // setMoving(true);
         this.moveWithSpeed(prx, from.getPosy(), destMach.getPosz(), 0);
 
     }
@@ -374,9 +367,9 @@ public class zFTS_Entity1 extends Entity {
         double realDistanceX = Math.abs(this.posx - x1); // Ergebniss immer positiv (Betrag)
         double realDistanceY = Math.abs(this.posy - y1); // Ergebniss immer positiv (Betrag)
         // bisher keine Z Betrachtung
-        double totalDistance = realDistanceX + realDistanceY;
+        double totalDistance = realDistanceX + realDistanceY; // Gesamtdistanz
 
-        long timeNeeded = ((long) (totalDistance / travelSpeed)) * 1000; // in s
+        long timeNeeded = ((long) (totalDistance / travelSpeed)) * 1000; // in ms
 
         setMoving(true);
 
@@ -391,7 +384,7 @@ public class zFTS_Entity1 extends Entity {
     }
 
     public boolean isAt(zFTS_Waypoint waypoint) {
-        double tolerance = 0.05; // toleranz erhöht
+        double tolerance = 0.05; // Toleranz
         if (waypoint != null) {
             if (Math.abs(posx - waypoint.getInterpolatedPosx()) < tolerance) {
                 if (Math.abs(posy - waypoint.getInterpolatedPosy()) < tolerance) {
@@ -429,7 +422,7 @@ public class zFTS_Entity1 extends Entity {
     public void setPosoOrder(zTG1_POSO Posorder) {
         this.poso = Posorder; // Telegramm Positionierung
         this.posoSrc = core.getEntityById(poso.Quelle);
-        zFTS_Waypoint wp1 = allmap(poso.Quelle);
+        zFTS_Waypoint wp1 = allMap(poso.Quelle);
         core.logInfo(this, "Mapping für POSO durchgeführt, Beauftragung nach " + wp1.getId());
         DestinationWay1.put(this.poso.telegramsubtype, wp1); // benötigten Code und Prozess
                                                              // abspeichern
@@ -441,8 +434,8 @@ public class zFTS_Entity1 extends Entity {
         String zwqq = WTOrder.Quelle.replaceAll("\\.+$", "");
         this.destMach = core.getEntityById(zwst); // konkrete Zielentität
         this.srcdest = core.getEntityById(zwqq); // konkrete Quellentität
-        zFTS_Waypoint lastdest1 = allmap(zwst);
-        zFTS_Waypoint firstsrc = allmap(zwqq);
+        zFTS_Waypoint lastdest1 = allMap(zwst);
+        zFTS_Waypoint firstsrc = allMap(zwqq);
         String combinedKeyQ = "WTSK-Q" + WTOrder.sequencenumber;
         String combinedKeyZ = "WTSK-Z" + WTOrder.sequencenumber;
         core.logInfo(this, "Beauftragung wtsk auf Entität " + lastdest1 + " wegen Ziel " + destMach);
@@ -460,7 +453,7 @@ public class zFTS_Entity1 extends Entity {
 
     }
 
-    public zFTS_Waypoint allmap(String dest) {
+    public zFTS_Waypoint allMap(String dest) {
         for (zFTS_Waypoint element : allWaypoints) {
             if (element.getMatchEntity() != null) {
                 String match = element.getMatchEntity();
@@ -473,21 +466,16 @@ public class zFTS_Entity1 extends Entity {
 
     }
 
-    public zFTS_Waypoint calcDest(Entity zDest) { // Berechne kürzeste Distanz //CN1 Achtung es sollen eig nicht alle
-                                                  // zWaypoints betrachtet werden (nur Produktionsnetz) evtl Einbau
-                                                  // Fleetid, nur mittlere PN WP checken!
+    public zFTS_Waypoint calcDest(Entity zDest) { // Berechne kürzeste Distanz
 
         zFTS_Waypoint mindist = null;
-        float dist1 = 99999; // Sauberer: positive unendlichkeit einbauen
+        float dist1 = 99999;
         float comp1 = 0;
 
         for (zFTS_Waypoint element : allWaypoints) {
 
             // Durch Waypoints iterieren Koordinaten speichern und nähsten Zurückgeben
             comp1 = (float) zDest.distanceTo(element);
-            // if (element.getWaypointCode() == 61 || element.getWaypointCode() == 64 ||
-            // lement.getWaypointCode() == 67
-            // || element.getWaypointCode() == 70 || element.getWaypointCode() == 73) {
 
             if (this.controller.getRelevantWpcode_ProductionArea().contains(element.getWaypointCode())) {
                 if (comp1 < dist1) {
@@ -515,7 +503,7 @@ public class zFTS_Entity1 extends Entity {
             core.logInfo(this, " jetzt Durchführung der HU Aufnahmelogik ");
             if (srcdest.hasItem()) {
                 Item HU = srcdest.getFirstItem();
-                if (HU.getId().equals(wtorder.HU_Nummer) || this.controller.isIgnoreHuId()) { // cn1 korrekte HU ID
+                if (HU.getId().equals(wtorder.HU_Nummer) || this.controller.isIgnoreHuId()) { // korrekte HU ID
                                                                                               // Prüfung
                     srcdest.moveItem(this, HU, 0);
                     this.infoTG(HU, null);
@@ -567,7 +555,6 @@ public class zFTS_Entity1 extends Entity {
             core.logInfo(this, " jetzt Durchführung der HU Abgabelogik ");
             this.warteLogik();
             if (this.waitingActive) {
-                // evtl boolean einbau inklusive handlestaufruf abfrage
                 blockedTransfer = false;
                 return;
             }
@@ -599,7 +586,7 @@ public class zFTS_Entity1 extends Entity {
                 core.addEvent(destEvent);
 
             } else {
-
+                core.logError(this, "FTF can not transfer HU to wanted destination, and will return to Homewaypoint ");
             }
 
         }
@@ -692,6 +679,9 @@ public class zFTS_Entity1 extends Entity {
                 conf.HU_Nummer = this.wtorder.HU_Nummer;
                 core.logInfo(this, "For WTCO telegram, HU Number of WTSK was used, since ignoreHuId is activated");
             }
+            if (this.destMach != null) {
+                conf.CP = destMach.getId();
+            }
             conf.HU_Höhe = wtorder.HU_Höhe; // unsicher ob Info auch aus Antsim entnehmbar
             conf.Paarbit = wtorder.Paarbit;
             conf.Paarbit = wtorder.Prioritätsbit;
@@ -723,7 +713,6 @@ public class zFTS_Entity1 extends Entity {
             this.moveFTF(to);
             this.lastWaypointCode = to.getWaypointCode();
             this.infoTG(null, "MPOE");
-            //DestinationWay1.clear();
             this.poso = null;
             this.posoSrc = null;
         }

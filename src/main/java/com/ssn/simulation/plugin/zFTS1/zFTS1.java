@@ -412,8 +412,7 @@ public class zFTS1 extends Entity {
     public void handlePaarbit(zTG1_WTSK tWtsk) {
         Entity Paarbit = core.getEntityById(tWtsk.Quelle);
         paarbitWtsk.put(tWtsk, Paarbit); // Hinzufügen zur Liste
-        zPaarbit pbEvent = new zPaarbit(core.now() + this.paarbitDuration_s * 1000, this, tWtsk); // cn1 Einbau Paarbit
-                                                                                                  // Parameter
+        zPaarbit pbEvent = new zPaarbit(core.now() + this.paarbitDuration_s * 1000, this, tWtsk); 
         core.addEvent(pbEvent);
         core.logInfo(this, "Paarbit Event added, WTSK will be seperately executed if no matching FTF/WTSK within "
                 + paarbitDuration_s + " seconds");
