@@ -63,7 +63,10 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
     private WaSocConnectionRegistry connectionRegistry;
 
     @JsonIgnore
-    public int sqn;
+    public int sqnIncoming;
+
+    @JsonIgnore
+    public int sqnOutgoing;
 
     public ZFTS_Connector() {
 
@@ -162,7 +165,8 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
         this.connections = new HashMap<>();
         this.FTS_Controller = new HashSet<>();
         this.connecting = false;
-        this.sqn = 0;
+        this.sqnIncoming = 0;
+        this.sqnOutgoing = 0;
         for (Entity entity : core.getEntities()) {
             String key = entity.getTelegramHandlerId();
             if (key != null) {
@@ -219,12 +223,12 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
         try {
             telegram.setSender(this.checkSenderId(this.fts_Sender_Id)); // Ktech Auslagerung variabler sender);
             telegram.setReceiver(zTG1.TELEGRAM_DELIMITER_HEADER1); // unsicher cn1
-            if (sqn == 9999) {
-                sqn = 1;
+            if (sqnOutgoing == 9999) {
+                sqnOutgoing = 1;
             } else {
-                sqn += 1;
+                sqnOutgoing += 1;
             }
-            telegram.setSequencenumber(sqn);
+            telegram.setSequencenumber(sqnOutgoing);
             telegram.setHandshake(zTG1.Handshake1);
             var connection = this.connectionRegistry.getConnection(zTG1.TELEGRAM_DELIMITER_START_ALL);
             var bytes = this.byteHandler.createTelegram();
@@ -265,7 +269,7 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
         } catch (Exception e) {
             this.core.logError(this, "unable to connect: " + e.toString(), e);
         }
-        this.core.logInfo(this, "ro-ber connected");
+        this.core.logInfo(this, " connected");
 
     }
 
@@ -281,16 +285,15 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
     public boolean handleTelegram(InboundTelegram telegram) {
         try {
             var header = this.byteHandler.read(telegram.getPayload(), zTG1.class);
-            if ((header.getSequencenumber() > 0 && header.getSequencenumber() == this.sqn
-                    && header.getSequencenumber() < this.sqn && this.sqn != 9999)
-                    || (this.sqn == 9999 && header.getSequencenumber() > 1)) {
-
+            if ((header.getSequencenumber() > 0 && header.getSequencenumber() == this.sqnIncoming)
+                    || (header.getSequencenumber() < this.sqnIncoming && this.sqnIncoming != 9999)
+                    || (this.sqnIncoming == 9999 && header.getSequencenumber() > 1)) {
                 this.core.logDebug(this,
                         "telegram with seqno " + header.getSequencenumber()
                                 + " already processed -> ignoring telegram");
                 return true;
             }
-            this.sqn = header.getSequencenumber();
+            this.sqnIncoming = header.getSequencenumber();
             switch (header.getTelegramsubtype()) {
                 case "WTSK":
                     zTG1_WTSK wtsk = byteHandler.read(telegram.getPayload(), zTG1_WTSK.class);

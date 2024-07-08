@@ -42,7 +42,7 @@ public class zFTS1 extends Entity {
     protected int capacityCheck_s;
     protected String wartePlatz;
     protected boolean createHU;
-
+    protected int home = 1;
 
     @JsonIgnore
     protected transient Map<String, zFTS_Entity1> FTSR; // FTS Klasse
@@ -248,7 +248,6 @@ public class zFTS1 extends Entity {
                         wtValue.setFTFId(firstKey.getId());
                         wtValue.setAssigned(true);
                     }
-
                 }
             } catch (NullPointerException e) {
                 // Hier Behandlung für eine NullPointerException einfügen
@@ -355,7 +354,7 @@ public class zFTS1 extends Entity {
 
     public void useUnutiliziedFTFtg(zTG1 TG1, boolean newTG) {
 
-        zFTS_Entity1 newFTF = getFreeFTFInit(1); // Wenn vorher kein POSO gesendet wurde
+        zFTS_Entity1 newFTF = getFreeFTFInit(home);
         if (newFTF != null && delayList.isEmpty()) {
 
             FTFOrder.put(newFTF, TG1);
@@ -364,13 +363,10 @@ public class zFTS1 extends Entity {
         }
 
         core.logInfo(this,
-                "FTF Capacity is reached/nearly reached " + TG1 + " probably can not be assigned to a FTF for now"); // fehlende
-        // Logging
-        // Unterscheidung
-        // cn1
+                "FTF Capacity is reached/nearly reached " + TG1 + " probably can not be assigned to a FTF for now");
+
         if (newTG) {
-            this.addDelayEntry(TG1); // funktioniert nicht, weil vor Eventausführung Entry bereits gelöscht wurde,
-                                     // und entsprechend wieder hinzugefügt wird change done
+            this.addDelayEntry(TG1);
         }
         if (newFTF != null) {
             zTG1 nextTG = null;
@@ -393,6 +389,7 @@ public class zFTS1 extends Entity {
             onTrigger(this);
             return;
         } else {
+
             // Event Erstellung
             zDelay dEvent = new zDelay(core.now() + (capacityCheck_s * 1000), this, TG1);
             core.addEvent(dEvent);
@@ -412,7 +409,7 @@ public class zFTS1 extends Entity {
     public void handlePaarbit(zTG1_WTSK tWtsk) {
         Entity Paarbit = core.getEntityById(tWtsk.Quelle);
         paarbitWtsk.put(tWtsk, Paarbit); // Hinzufügen zur Liste
-        zPaarbit pbEvent = new zPaarbit(core.now() + this.paarbitDuration_s * 1000, this, tWtsk); 
+        zPaarbit pbEvent = new zPaarbit(core.now() + this.paarbitDuration_s * 1000, this, tWtsk);
         core.addEvent(pbEvent);
         core.logInfo(this, "Paarbit Event added, WTSK will be seperately executed if no matching FTF/WTSK within "
                 + paarbitDuration_s + " seconds");
@@ -472,9 +469,9 @@ public class zFTS1 extends Entity {
     public String getWartePlatz() {
         return wartePlatz;
     }
+
     public boolean isCreateHU() {
         return createHU;
     }
-
 
 }
