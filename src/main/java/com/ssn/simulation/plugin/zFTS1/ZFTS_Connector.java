@@ -166,7 +166,7 @@ public class ZFTS_Connector extends Entity implements WaSocTelegramHandler {
         this.FTS_Controller = new HashSet<>();
         this.connecting = false;
         this.sqnIncoming = 0;
-        this.sqnOutgoing = 0;
+        this.sqnOutgoing = -1;
         for (Entity entity : core.getEntities()) {
             String key = entity.getTelegramHandlerId();
             if (key != null) {
